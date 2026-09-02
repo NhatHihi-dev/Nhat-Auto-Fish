@@ -9,23 +9,23 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SimpleAutoFishGui"
 ScreenGui.Parent = PlayerGui
 
--- Nút ẩn/hiện menu chính (Mặc định bắt đầu là OFF vì menu đang ẩn)
+-- Nút ẩn/hiện menu chính (Mặc định ban đầu ẩn menu)
 local MainToggleButton = Instance.new("TextButton")
 MainToggleButton.Name = "MainToggleButton"
 MainToggleButton.Parent = ScreenGui
 MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 MainToggleButton.Position = UDim2.new(0, 50, 0, 50)
-MainToggleButton.Size = UDim2.new(0, 700, 0, 20)
+MainToggleButton.Size = UDim2.new(0, 220, 0, 40)
 MainToggleButton.Font = Enum.Font.SourceSansBold
-MainToggleButton.Text = "OFF"
+MainToggleButton.Text = "Menu: OFF"
 MainToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainToggleButton.TextSize = 12
+MainToggleButton.TextSize = 16
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainToggleButton
 
--- Frame chứa ScrollingFrame (Mặc định ẩn đi khi vừa chạy script)
+-- Frame chứa ScrollingFrame (Mặc định ẩn)
 local ContainerFrame = Instance.new("Frame")
 ContainerFrame.Name = "ContainerFrame"
 ContainerFrame.Parent = ScreenGui
@@ -33,19 +33,19 @@ ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ContainerFrame.BackgroundTransparency = 0.1
 ContainerFrame.Position = UDim2.new(0, 50, 0, 95)
 ContainerFrame.Size = UDim2.new(0, 235, 0, 300)
-ContainerFrame.Visible = false 
+ContainerFrame.Visible = false
 
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
 ContainerCorner.Parent = ContainerFrame
 
--- Thanh cuộn ScrollingFrame bên trong
+-- Thanh cuộn ScrollingFrame bên trong (Tăng CanvasSize lên để chứa thêm dòng chọn thuyền)
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Parent = ContainerFrame
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
 ScrollingFrame.Size = UDim2.new(0, 225, 0, 290)
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 370)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 415)
 ScrollingFrame.ScrollBarThickness = 4
 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 
@@ -60,8 +60,11 @@ _G.AutoSellFish = false
 _G.AutoSkillZ = false
 _G.DangerSc = "Lv 1"
 _G.SailBoats = false
-_G.SelectedBoat = "Guardian"
+_G.SelectedBoat = "MarineSloop"
 _G.BoatSpeed = 250
+
+-- Danh sách loại thuyền đầy đủ của ông đây
+local ListSeaBoat = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"}
 
 -- Hàm tạo hàng công tắc gạt (Switch Toggle)
 local function CreateToggleRow(name, posY, callback)
@@ -153,7 +156,7 @@ local function CreateDropdownRow(name, posY, options, callback)
     valueButton.Font = Enum.Font.SourceSansBold
     valueButton.Text = options[1]
     valueButton.TextColor3 = Color3.fromRGB(180, 180, 255)
-    valueButton.TextSize = 11
+    valueButton.TextSize = 10
 
     local valCorner = Instance.new("UICorner")
     valCorner.CornerRadius = UDim.new(0, 4)
@@ -168,7 +171,7 @@ local function CreateDropdownRow(name, posY, options, callback)
     end)
 end
 
--- Danh sách nút
+-- Thêm các mục cấu hình vào ScrollingFrame theo thứ tự khoảng cách
 CreateDropdownRow("Rod:", 5, {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
     _G.SelectedRod = val
 end)
@@ -202,20 +205,24 @@ CreateDropdownRow("Sea Zone", 285, ListSeaZone, function(val)
     _G.DangerSc = val
 end)
 
-CreateToggleRow("Sail Boats", 325, function(val)
+CreateDropdownRow("Boat Type", 325, ListSeaBoat, function(val)
+    _G.SelectedBoat = val
+end)
+
+CreateToggleRow("Sail Boats", 365, function(val)
     _G.SailBoats = val
 end)
 
--- Xử lý ẩn hiện menu chính (Khớp với trạng thái ẩn ban đầu)
+-- Xử lý ẩn hiện menu chính
 local menuVisible = false
 MainToggleButton.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
     ContainerFrame.Visible = menuVisible
     if menuVisible then
-        MainToggleButton.Text = "ON"
+        MainToggleButton.Text = "Menu: ON"
         MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     else
-        MainToggleButton.Text = "OFF"
+        MainToggleButton.Text = "Menu: OFF"
         MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
     end
 end)
@@ -333,7 +340,7 @@ local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
 local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(0.5) do
         if _G.AutoSkillZ then
             pcall(function()
                 RFJobToolAbilities4:InvokeServer("Z", true)
