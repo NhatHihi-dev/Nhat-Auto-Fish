@@ -24,18 +24,28 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainToggleButton
 
--- Frame chứa toàn bộ các tính năng (Tăng chiều cao lên 390 để chứa thêm 2 mục mới)
+-- Frame chứa ScrollingFrame
 local ContainerFrame = Instance.new("Frame")
 ContainerFrame.Name = "ContainerFrame"
 ContainerFrame.Parent = ScreenGui
 ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ContainerFrame.BackgroundTransparency = 0.1
 ContainerFrame.Position = UDim2.new(0, 50, 0, 95)
-ContainerFrame.Size = UDim2.new(0, 220, 0, 390)
+ContainerFrame.Size = UDim2.new(0, 235, 0, 300)
 
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
 ContainerCorner.Parent = ContainerFrame
+
+-- Thanh cuộn ScrollingFrame bên trong
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Parent = ContainerFrame
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
+ScrollingFrame.Size = UDim2.new(0, 225, 0, 290)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 370)
+ScrollingFrame.ScrollBarThickness = 4
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
@@ -53,10 +63,10 @@ _G.SelectedBoat = "Guardian"
 -- Hàm tạo hàng công tắc gạt (Switch Toggle)
 local function CreateToggleRow(name, posY, callback)
     local rowFrame = Instance.new("Frame")
-    rowFrame.Parent = ContainerFrame
+    rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-    rowFrame.Position = UDim2.new(0, 10, 0, posY)
-    rowFrame.Size = UDim2.new(0, 200, 0, 35)
+    rowFrame.Position = UDim2.new(0, 5, 0, posY)
+    rowFrame.Size = UDim2.new(0, 205, 0, 35)
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -112,10 +122,10 @@ end
 -- Hàm tạo hàng Dropdown
 local function CreateDropdownRow(name, posY, options, callback)
     local rowFrame = Instance.new("Frame")
-    rowFrame.Parent = ContainerFrame
+    rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-    rowFrame.Position = UDim2.new(0, 10, 0, posY)
-    rowFrame.Size = UDim2.new(0, 200, 0, 35)
+    rowFrame.Position = UDim2.new(0, 5, 0, posY)
+    rowFrame.Size = UDim2.new(0, 205, 0, 35)
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -136,7 +146,7 @@ local function CreateDropdownRow(name, posY, options, callback)
     valueButton.Parent = rowFrame
     valueButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     valueButton.Position = UDim2.new(0, 90, 0.5, -12)
-    valueButton.Size = UDim2.new(0, 105, 0, 24)
+    valueButton.Size = UDim2.new(0, 110, 0, 24)
     valueButton.Font = Enum.Font.SourceSansBold
     valueButton.Text = options[1]
     valueButton.TextColor3 = Color3.fromRGB(180, 180, 255)
@@ -155,60 +165,41 @@ local function CreateDropdownRow(name, posY, options, callback)
     end)
 end
 
--- Danh sách các tính năng
-CreateDropdownRow("Rod:", 10, {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
+-- Danh sách nút
+CreateDropdownRow("Rod:", 5, {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
     _G.SelectedRod = val
 end)
 
-CreateDropdownRow("Bait:", 50, {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
+CreateDropdownRow("Bait:", 45, {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
     _G.SelectedBait = val
 end)
 
-CreateToggleRow("Auto Fish", 90, function(val)
+CreateToggleRow("Auto Fish", 85, function(val)
     _G.AutoFishing = val
 end)
 
-CreateToggleRow("Auto Quest", 130, function(val)
+CreateToggleRow("Auto Quest", 125, function(val)
     _G.AutoFishingQuest = val
 end)
 
-CreateToggleRow("Auto Complete", 170, function(val)
+CreateToggleRow("Auto Complete", 165, function(val)
     _G.AutoQuestComplete = val
-    if val then  
-        pcall(function()  
-            local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
-            local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
-            if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
-                RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "FinishQuest")  
-            end
-        end)  
-    end
 end)
 
-CreateToggleRow("Auto Sell Fish", 210, function(val)
+CreateToggleRow("Auto Sell Fish", 205, function(val)
     _G.AutoSellFish = val
-    if val then
-        pcall(function()
-            local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
-            local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
-            if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
-                RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "SellFish")
-            end
-        end)
-    end
 end)
 
-CreateToggleRow("Auto Skill Z", 250, function(val)
+CreateToggleRow("Auto Skill Z", 245, function(val)
     _G.AutoSkillZ = val
 end)
 
--- Thêm 2 mục mới ông yêu cầu: Chọn vùng biển (Danger Zone) và Auto Lái Tàu (Sail Boats)
 local ListSeaZone = {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"}
-CreateDropdownRow("Sea Zone", 290, ListSeaZone, function(val)
+CreateDropdownRow("Sea Zone", 285, ListSeaZone, function(val)
     _G.DangerSc = val
 end)
 
-CreateToggleRow("Sail Boats", 330, function(val)
+CreateToggleRow("Sail Boats", 325, function(val)
     _G.SailBoats = val
 end)
 
@@ -304,6 +295,21 @@ task.spawn(function()
     end
 end)
 
+-- Vòng lặp Auto Complete Quest (Đã thêm lại vòng lặp 5 giây chuẩn chỉnh cho ông)
+task.spawn(function()
+    while task.wait(5) do 
+        if _G.AutoQuestComplete then
+            pcall(function()
+                local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
+                local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+                if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
+                    RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "FinishQuest")
+                end
+            end)
+        end
+    end
+end)
+
 -- Vòng lặp Auto Sell Fish
 task.spawn(function()
     while task.wait(5) do 
@@ -324,7 +330,7 @@ local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
 local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         if _G.AutoSkillZ then
             pcall(function()
                 RFJobToolAbilities4:InvokeServer("Z", true)
@@ -333,20 +339,19 @@ task.spawn(function()
     end
 end)
 
--- Vòng lặp Sail Boats & Danger Zone ông gửi thêm
+-- Vòng lặp Sail Boats & Danger Zone
 local replicated = game:GetService("ReplicatedStorage")
 local plr = LocalPlayer
 
--- Các hàm giả định phụ trợ nếu script gốc thiếu (để tránh lỗi crash)
 local function CheckBoat() return workspace:FindFirstChild("MyBoat") end
 local function CheckShark() return false end
-local function CheckTerrorShark() return false end
+local function CheckTerrorShark() return true end
 local function CheckFishCrew() return false end
 local function CheckPiranha() return false end
 local function CheckEnemiesBoat() return false end
 local function CheckSeaBeast() return false end
-local function CheckPirateGrandBrigade() return false end
-local function CheckHauntedCrew() return false end
+local function CheckPirateGrandBrigade() return true end
+local function CheckHauntedCrew() return true end
 local function CheckLeviathan() return false end
 local function TeleportToTarget(cf) if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then plr.Character.HumanoidRootPart.CFrame = cf end end
 local function _tp(cf) TeleportToTarget(cf) end
