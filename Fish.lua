@@ -15,11 +15,11 @@ MainToggleButton.Name = "MainToggleButton"
 MainToggleButton.Parent = ScreenGui
 MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 MainToggleButton.Position = UDim2.new(0, 50, 0, 50)
-MainToggleButton.Size = UDim2.new(0, 220, 0, 40)
+MainToggleButton.Size = UDim2.new(0, 700, 0, 20)
 MainToggleButton.Font = Enum.Font.SourceSansBold
-MainToggleButton.Text = "Menu: OFF"
+MainToggleButton.Text = "OFF"
 MainToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainToggleButton.TextSize = 16
+MainToggleButton.TextSize = 12
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
@@ -33,7 +33,7 @@ ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ContainerFrame.BackgroundTransparency = 0.1
 ContainerFrame.Position = UDim2.new(0, 50, 0, 95)
 ContainerFrame.Size = UDim2.new(0, 235, 0, 300)
-ContainerFrame.Visible = false -- Đặt ẩn lúc mới load
+ContainerFrame.Visible = false 
 
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
@@ -51,7 +51,7 @@ ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
-_G.SelectedBait = "Kelp Bait"
+_G.SelectedBait = "Basic Bait"
 _G.AutoBuyBait = false
 _G.AutoFishing = false
 _G.AutoFishingQuest = false
@@ -212,10 +212,10 @@ MainToggleButton.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
     ContainerFrame.Visible = menuVisible
     if menuVisible then
-        MainToggleButton.Text = "Menu: ON"
+        MainToggleButton.Text = "ON"
         MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     else
-        MainToggleButton.Text = "Menu: OFF"
+        MainToggleButton.Text = "OFF"
         MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
     end
 end)
@@ -333,7 +333,7 @@ local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
 local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         if _G.AutoSkillZ then
             pcall(function()
                 RFJobToolAbilities4:InvokeServer("Z", true)
