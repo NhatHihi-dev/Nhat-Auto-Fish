@@ -414,20 +414,28 @@ task.spawn(function()
         end
     end
 end)
--- Vòng lặp Sail Boats & Danger Zone
+-- Vòng lặp Sail Boats & Danger Zone (Đã sửa lỗi mua thuyền lặp liên tục)
 local replicated = game:GetService("ReplicatedStorage")
 local plr = LocalPlayer
 
 local function CheckBoat() 
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    
     local boatsFolder = workspace:FindFirstChild("Boats")
     if boatsFolder then
         for _, boat in pairs(boatsFolder:GetChildren()) do
-            if boat:FindFirstChild("Owner") and boat.Owner.Value == plr.Name then
+            local seat = boat:FindFirstChild("VehicleSeat") or boat:FindFirstChildWhichIsA("VehicleSeat", true)
+            if seat and (seat.Position - char.HumanoidRootPart.Position).Magnitude < 150 then
                 return boat
             end
         end
     end
-    return workspace:FindFirstChild("MyBoat") 
+    
+    local myBoat = workspace:FindFirstChild("MyBoat")
+    if myBoat then return myBoat end
+    
+    return nil
 end
 
 local function CheckShark() return false end
@@ -465,18 +473,18 @@ local function TeleportToTarget(cf) LerpToTarget(cf) end
 local function _tp(cf) LerpToTarget(cf) end
 
 spawn(function()
-  while wait() do
+  while task.wait(0.5) do
     if _G.SailBoats then 
       pcall(function()        
         local myBoat = CheckBoat()
-        if not myBoat and not(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)and not(CheckEnemiesBoat()and _G.FishBoat)and not(CheckSeaBeast()and _G.SeaBeast1)and not(_G.PGB and CheckPirateGrandBrigade())and not(_G.HCM and CheckHauntedCrew())and not(_G.Leviathan1 and CheckLeviathan())then
+        if not myBoat then
           local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
           TeleportToTarget(buyBoatCFrame)
-          if (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 then 
+          if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 15 then 
               replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
-              task.wait(1) 
+              task.wait(2) -- Chờ 2 giây để game load thuyền ra tránh mua dồn dập
           end
-        elseif myBoat and not(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)and not(CheckEnemiesBoat()and _G.FishBoat)and not(CheckSeaBeast()and _G.SeaBeast1)and not(_G.PGB and CheckPirateGrandBrigade())and not(_G.HCM and CheckHauntedCrew())and not(_G.Leviathan1 and CheckLeviathan())then
+        else
           if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false then
             local vehicleSeat = myBoat:FindFirstChild("VehicleSeat") or myBoat:FindFirstChildWhichIsA("VehicleSeat", true)
             if vehicleSeat then
@@ -497,13 +505,11 @@ spawn(function()
             elseif _G.DangerSc == "Lv 6" then CFrameSelectedZone = CFrame.new(-44541.7617, 30.0003204, -1244.8584)
             elseif _G.DangerSc == "Lv Infinite" then CFrameSelectedZone = CFrame.new(-10000000, 31, 37016.25)
             end           
-            repeat wait() 
-              if (not _G.FishBoat and CheckEnemiesBoat()) or (not _G.PGB and CheckPirateGrandBrigade()) or (not _G.TerrorShark and CheckTerrorShark()) then
-                _tp(CFrameSelectedZone * CFrame.new(0,150,0))
-              else
-                _tp(CFrameSelectedZone)
-              end           
-            until _G.SailBoats==false or(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)or CheckSeaBeast()and _G.SeaBeast1 or CheckEnemiesBoat()and _G.FishBoat or _G.Leviathan1 and CheckLeviathan() or _G.HCM and CheckHauntedCrew() or _G.PGB and CheckPirateGrandBrigade() or (plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false) 
+            repeat 
+              task.wait() 
+              _tp(CFrameSelectedZone)
+            until _G.SailBoats == false or (plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false) 
+            
             if plr.Character and plr.Character:FindFirstChild("Humanoid") then
                 plr.Character.Humanoid.Sit = false
             end
@@ -515,17 +521,13 @@ spawn(function()
 end)
 
 spawn(function()
-    while wait(1) do 
+    while task.wait(1) do 
         pcall(function()
             if workspace:FindFirstChild("Boats") then
-                for a,b in pairs(workspace.Boats:GetChildren()) do 
-                    for c,d in pairs(workspace.Boats[b.Name]:GetDescendants()) do 
+                for _, b in pairs(workspace.Boats:GetChildren()) do 
+                    for _, d in pairs(b:GetDescendants()) do 
                         if d:IsA("BasePart") then 
-                            if _G.SailBoats then 
-                                d.CanCollide = false 
-                            else 
-                                d.CanCollide = true 
-                            end 
+                            d.CanCollide = not _G.SailBoats
                         end 
                     end 
                 end
