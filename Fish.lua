@@ -39,16 +39,16 @@ local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
 ContainerCorner.Parent = ContainerFrame
 
--- Thanh cuộn ScrollingFrame bên trong (Tăng CanvasSize lên để chứa thêm dòng chọn thuyền)
+-- Thanh cuộn ScrollingFrame bên trong (Tự động co giãn theo nội dung)
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Parent = ContainerFrame
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
 ScrollingFrame.Size = UDim2.new(0, 225, 0, 290)
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 415)
+ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Tự động chỉnh kích thước cuộn
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ScrollBarThickness = 4
 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
-
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
 _G.SelectedBait = "Basic Bait"
