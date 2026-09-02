@@ -50,7 +50,7 @@ ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ScrollBarThickness = 4
 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 
--- Tự động sắp xếp các hàng dọc theo thứ tự xuất hiện
+-- Tự động sắp xếp các hàng dọc theo LayoutOrder
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = ScrollingFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -72,12 +72,18 @@ _G.BoatSpeed = 250
 
 local ListSeaBoat = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"}
 
--- Hàm tạo hàng công tắc gạt (Switch Toggle) - Không cần truyền posY nữa
+-- Biến đếm LayoutOrder tự động tăng
+local CurrentLayoutOrder = 0
+
+-- Hàm tạo hàng công tắc gạt (Switch Toggle)
 local function CreateToggleRow(name, callback)
+    CurrentLayoutOrder = CurrentLayoutOrder + 1
+    
     local rowFrame = Instance.new("Frame")
     rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
     rowFrame.Size = UDim2.new(0, 215, 0, 35)
+    rowFrame.LayoutOrder = CurrentLayoutOrder
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -130,12 +136,15 @@ local function CreateToggleRow(name, callback)
     end)
 end
 
--- Hàm tạo hàng Dropdown - Không cần truyền posY nữa
+-- Hàm tạo hàng Dropdown
 local function CreateDropdownRow(name, options, callback)
+    CurrentLayoutOrder = CurrentLayoutOrder + 1
+    
     local rowFrame = Instance.new("Frame")
     rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
     rowFrame.Size = UDim2.new(0, 215, 0, 35)
+    rowFrame.LayoutOrder = CurrentLayoutOrder
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -175,7 +184,7 @@ local function CreateDropdownRow(name, options, callback)
     end)
 end
 
--- Thêm các mục vào menu theo đúng thứ tự (UIListLayout tự sắp xếp)
+-- Thêm các mục vào menu theo đúng thứ tự gọi
 CreateDropdownRow("Rod:", {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
     _G.SelectedRod = val
 end)
