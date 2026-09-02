@@ -414,24 +414,23 @@ task.spawn(function()
         end
     end
 end)
--- Vòng lặp Sail Boats & Danger Zone (Đã sửa lỗi mua thuyền lặp liên tục)
+-- Vòng lặp Sail Boats & Danger Zone (Đã sửa lỗi tele lung tung và lỗi check mất thuyền cũ)
 local replicated = game:GetService("ReplicatedStorage")
 local plr = LocalPlayer
 
 local function CheckBoat() 
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    
+    -- Kiểm tra thư mục Boats chính hãng của Blox Fruits xem có thuyền của mình không
     local boatsFolder = workspace:FindFirstChild("Boats")
     if boatsFolder then
         for _, boat in pairs(boatsFolder:GetChildren()) do
-            local seat = boat:FindFirstChild("VehicleSeat") or boat:FindFirstChildWhichIsA("VehicleSeat", true)
-            if seat and (seat.Position - char.HumanoidRootPart.Position).Magnitude < 150 then
+            local ownerVal = boat:FindFirstChild("Owner")
+            if ownerVal and ownerVal.Value == plr.Name then
                 return boat
             end
         end
     end
     
+    -- Dự phòng kiểm tra thư mục MyBoat
     local myBoat = workspace:FindFirstChild("MyBoat")
     if myBoat then return myBoat end
     
@@ -466,7 +465,9 @@ local function LerpToTarget(targetCFrame)
         hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
         RunService.Heartbeat:Wait()
     end
-    hrp.CFrame = targetCFrame
+    if _G.SailBoats then
+        hrp.CFrame = targetCFrame
+    end
 end
 
 local function TeleportToTarget(cf) LerpToTarget(cf) end
@@ -478,13 +479,15 @@ spawn(function()
       pcall(function()        
         local myBoat = CheckBoat()
         if not myBoat then
+          -- Nếu hoàn toàn không có thuyền trên map mới tiến hành đi mua
           local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
           TeleportToTarget(buyBoatCFrame)
           if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 15 then 
               replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
-              task.wait(2) -- Chờ 2 giây để game load thuyền ra tránh mua dồn dập
+              task.wait(2) -- Chờ thuyền khởi tạo xong
           end
         else
+          -- Nếu đã có thuyền nhưng nhân vật chưa ngồi lên ghế lái (lỡ bấm nhảy ra ngoài)
           if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false then
             local vehicleSeat = myBoat:FindFirstChild("VehicleSeat") or myBoat:FindFirstChildWhichIsA("VehicleSeat", true)
             if vehicleSeat then
@@ -496,6 +499,7 @@ spawn(function()
                 end
             end
           else                         
+            -- Đã ngồi trên thuyền, tiến hành di chuyển đến Danger Zone đã chọn
             local CFrameSelectedZone
             if _G.DangerSc == "Lv 1" then CFrameSelectedZone = CFrame.new(-21998.375, 30.0006084, -682.309143)
             elseif _G.DangerSc == "Lv 2" then CFrameSelectedZone = CFrame.new(-26779.5215, 30.0005474, -822.858032)
@@ -505,12 +509,15 @@ spawn(function()
             elseif _G.DangerSc == "Lv 6" then CFrameSelectedZone = CFrame.new(-44541.7617, 30.0003204, -1244.8584)
             elseif _G.DangerSc == "Lv Infinite" then CFrameSelectedZone = CFrame.new(-10000000, 31, 37016.25)
             end           
+            
             repeat 
               task.wait() 
-              _tp(CFrameSelectedZone)
+              if _G.SailBoats then
+                  _tp(CFrameSelectedZone)
+              end
             until _G.SailBoats == false or (plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false) 
             
-            if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            if not _G.SailBoats and plr.Character and plr.Character:FindFirstChild("Humanoid") then
                 plr.Character.Humanoid.Sit = false
             end
           end
