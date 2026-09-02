@@ -93,16 +93,16 @@ UIListLayout.Padding = UDim.new(0, 5)
 
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
-_G.SelectedBait = "Kelp Bait"
+_G.SelectedBait = "Basic Bait"
 _G.AutoBuyBait = false
 _G.AutoFishing = false
 _G.AutoFishingQuest = false
 _G.AutoQuestComplete = false
 _G.AutoSellFish = false
 _G.AutoSkillZ = false
-_G.DangerSc = "Lv 1"
+_G.DangerSc = "Lv Infinite"
 _G.SailBoats = false
-_G.SelectedBoat = "Guardian"
+_G.SelectedBoat = "MarineSloop"
 _G.BoatSpeed = 250
 
 local ListSeaBoat = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"}
