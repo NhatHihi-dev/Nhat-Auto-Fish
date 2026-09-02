@@ -39,19 +39,26 @@ local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
 ContainerCorner.Parent = ContainerFrame
 
--- Thanh cuộn ScrollingFrame bên trong (Tự động co giãn theo nội dung)
+-- Thanh cuộn ScrollingFrame bên trong
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Parent = ContainerFrame
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
 ScrollingFrame.Size = UDim2.new(0, 225, 0, 290)
-ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Tự động chỉnh kích thước cuộn
+ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ScrollBarThickness = 4
 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+
+-- Tự động sắp xếp các hàng dọc theo thứ tự xuất hiện
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScrollingFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
+
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
-_G.SelectedBait = "Basic Bait"
+_G.SelectedBait = "Kelp Bait"
 _G.AutoBuyBait = false
 _G.AutoFishing = false
 _G.AutoFishingQuest = false
@@ -60,19 +67,17 @@ _G.AutoSellFish = false
 _G.AutoSkillZ = false
 _G.DangerSc = "Lv 1"
 _G.SailBoats = false
-_G.SelectedBoat = "MarineSloop"
+_G.SelectedBoat = "Guardian"
 _G.BoatSpeed = 250
 
--- Danh sách loại thuyền đầy đủ của ông đây
 local ListSeaBoat = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"}
 
--- Hàm tạo hàng công tắc gạt (Switch Toggle)
-local function CreateToggleRow(name, posY, callback)
+-- Hàm tạo hàng công tắc gạt (Switch Toggle) - Không cần truyền posY nữa
+local function CreateToggleRow(name, callback)
     local rowFrame = Instance.new("Frame")
     rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-    rowFrame.Position = UDim2.new(0, 5, 0, posY)
-    rowFrame.Size = UDim2.new(0, 205, 0, 35)
+    rowFrame.Size = UDim2.new(0, 215, 0, 35)
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -125,13 +130,12 @@ local function CreateToggleRow(name, posY, callback)
     end)
 end
 
--- Hàm tạo hàng Dropdown
-local function CreateDropdownRow(name, posY, options, callback)
+-- Hàm tạo hàng Dropdown - Không cần truyền posY nữa
+local function CreateDropdownRow(name, options, callback)
     local rowFrame = Instance.new("Frame")
     rowFrame.Parent = ScrollingFrame
     rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-    rowFrame.Position = UDim2.new(0, 5, 0, posY)
-    rowFrame.Size = UDim2.new(0, 205, 0, 35)
+    rowFrame.Size = UDim2.new(0, 215, 0, 35)
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -151,7 +155,7 @@ local function CreateDropdownRow(name, posY, options, callback)
     local valueButton = Instance.new("TextButton")
     valueButton.Parent = rowFrame
     valueButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-    valueButton.Position = UDim2.new(0, 90, 0.5, -12)
+    valueButton.Position = UDim2.new(0, 95, 0.5, -12)
     valueButton.Size = UDim2.new(0, 110, 0, 24)
     valueButton.Font = Enum.Font.SourceSansBold
     valueButton.Text = options[1]
@@ -171,45 +175,44 @@ local function CreateDropdownRow(name, posY, options, callback)
     end)
 end
 
--- Thêm các mục cấu hình vào ScrollingFrame theo thứ tự khoảng cách
-CreateDropdownRow("Rod:", 5, {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
+-- Thêm các mục vào menu theo đúng thứ tự (UIListLayout tự sắp xếp)
+CreateDropdownRow("Rod:", {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
     _G.SelectedRod = val
 end)
 
-CreateDropdownRow("Bait:", 45, {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
+CreateDropdownRow("Bait:", {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
     _G.SelectedBait = val
 end)
 
-CreateToggleRow("Auto Fish", 85, function(val)
+CreateToggleRow("Auto Fish", function(val)
     _G.AutoFishing = val
 end)
 
-CreateToggleRow("Auto Quest", 125, function(val)
+CreateToggleRow("Auto Quest", function(val)
     _G.AutoFishingQuest = val
 end)
 
-CreateToggleRow("Auto Complete", 165, function(val)
+CreateToggleRow("Auto Complete", function(val)
     _G.AutoQuestComplete = val
 end)
 
-CreateToggleRow("Auto Sell Fish", 205, function(val)
+CreateToggleRow("Auto Sell Fish", function(val)
     _G.AutoSellFish = val
 end)
 
-CreateToggleRow("Auto Skill Z", 245, function(val)
+CreateToggleRow("Auto Skill Z", function(val)
     _G.AutoSkillZ = val
 end)
 
-local ListSeaZone = {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"}
-CreateDropdownRow("Sea Zone", 285, ListSeaZone, function(val)
+CreateDropdownRow("Sea Zone", {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"}, function(val)
     _G.DangerSc = val
 end)
 
-CreateDropdownRow("Boat Type", 325, ListSeaBoat, function(val)
+CreateDropdownRow("Boat Type", ListSeaBoat, function(val)
     _G.SelectedBoat = val
 end)
 
-CreateToggleRow("Sail Boats", 365, function(val)
+CreateToggleRow("Sail Boats", function(val)
     _G.SailBoats = val
 end)
 
