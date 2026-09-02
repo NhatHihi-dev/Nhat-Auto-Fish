@@ -2,21 +2,22 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 -- Tạo GUI chính
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SimpleAutoFishGui"
 ScreenGui.Parent = PlayerGui
 
--- Nút ẩn/hiện menu chính
+-- Nút ẩn/hiện menu chính (Mặc định bắt đầu là OFF vì menu đang ẩn)
 local MainToggleButton = Instance.new("TextButton")
 MainToggleButton.Name = "MainToggleButton"
 MainToggleButton.Parent = ScreenGui
-MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 MainToggleButton.Position = UDim2.new(0, 50, 0, 50)
 MainToggleButton.Size = UDim2.new(0, 220, 0, 40)
 MainToggleButton.Font = Enum.Font.SourceSansBold
-MainToggleButton.Text = "Menu: ON"
+MainToggleButton.Text = "Menu: OFF"
 MainToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 MainToggleButton.TextSize = 16
 
@@ -24,7 +25,7 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainToggleButton
 
--- Frame chứa ScrollingFrame
+-- Frame chứa ScrollingFrame (Mặc định ẩn đi khi vừa chạy script)
 local ContainerFrame = Instance.new("Frame")
 ContainerFrame.Name = "ContainerFrame"
 ContainerFrame.Parent = ScreenGui
@@ -32,6 +33,7 @@ ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ContainerFrame.BackgroundTransparency = 0.1
 ContainerFrame.Position = UDim2.new(0, 50, 0, 95)
 ContainerFrame.Size = UDim2.new(0, 235, 0, 300)
+ContainerFrame.Visible = false -- Đặt ẩn lúc mới load
 
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
@@ -59,6 +61,7 @@ _G.AutoSkillZ = false
 _G.DangerSc = "Lv 1"
 _G.SailBoats = false
 _G.SelectedBoat = "Guardian"
+_G.BoatSpeed = 250
 
 -- Hàm tạo hàng công tắc gạt (Switch Toggle)
 local function CreateToggleRow(name, posY, callback)
@@ -203,8 +206,8 @@ CreateToggleRow("Sail Boats", 325, function(val)
     _G.SailBoats = val
 end)
 
--- Xử lý ẩn hiện menu chính
-local menuVisible = true
+-- Xử lý ẩn hiện menu chính (Khớp với trạng thái ẩn ban đầu)
+local menuVisible = false
 MainToggleButton.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
     ContainerFrame.Visible = menuVisible
@@ -295,7 +298,7 @@ task.spawn(function()
     end
 end)
 
--- Vòng lặp Auto Complete Quest (Đã thêm lại vòng lặp 5 giây chuẩn chỉnh cho ông)
+-- Vòng lặp Auto Complete Quest
 task.spawn(function()
     while task.wait(5) do 
         if _G.AutoQuestComplete then
@@ -330,7 +333,7 @@ local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
 local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(0.5) do
         if _G.AutoSkillZ then
             pcall(function()
                 RFJobToolAbilities4:InvokeServer("Z", true)
@@ -339,7 +342,7 @@ task.spawn(function()
     end
 end)
 
--- Vòng lặp Sail Boats & Danger Zone
+-- Vòng lặp Sail Boats & Danger Zone dùng Lerp mượt mà
 local replicated = game:GetService("ReplicatedStorage")
 local plr = LocalPlayer
 
@@ -353,8 +356,30 @@ local function CheckSeaBeast() return false end
 local function CheckPirateGrandBrigade() return false end
 local function CheckHauntedCrew() return false end
 local function CheckLeviathan() return false end
-local function TeleportToTarget(cf) if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then plr.Character.HumanoidRootPart.CFrame = cf end end
-local function _tp(cf) TeleportToTarget(cf) end
+
+local function LerpToTarget(targetCFrame)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local speed = _G.BoatSpeed or 250
+    local timeToReach = distance / speed
+    
+    local startTime = tick()
+    local startCFrame = hrp.CFrame
+    
+    while tick() - startTime < timeToReach do
+        if not _G.SailBoats then break end
+        local alpha = (tick() - startTime) / timeToReach
+        hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
+        RunService.Heartbeat:Wait()
+    end
+    hrp.CFrame = targetCFrame
+end
+
+local function TeleportToTarget(cf) LerpToTarget(cf) end
+local function _tp(cf) LerpToTarget(cf) end
 
 spawn(function()
   while wait() do
