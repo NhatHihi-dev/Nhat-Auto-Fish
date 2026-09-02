@@ -1,0 +1,410 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local TweenService = game:GetService("TweenService")
+
+-- Tạo GUI chính
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SimpleAutoFishGui"
+ScreenGui.Parent = PlayerGui
+
+-- Nút ẩn/hiện menu chính
+local MainToggleButton = Instance.new("TextButton")
+MainToggleButton.Name = "MainToggleButton"
+MainToggleButton.Parent = ScreenGui
+MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainToggleButton.Position = UDim2.new(0, 50, 0, 50)
+MainToggleButton.Size = UDim2.new(0, 220, 0, 40)
+MainToggleButton.Font = Enum.Font.SourceSansBold
+MainToggleButton.Text = "Menu: ON"
+MainToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainToggleButton.TextSize = 16
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainToggleButton
+
+-- Frame chứa toàn bộ các tính năng (Tăng chiều cao lên 390 để chứa thêm 2 mục mới)
+local ContainerFrame = Instance.new("Frame")
+ContainerFrame.Name = "ContainerFrame"
+ContainerFrame.Parent = ScreenGui
+ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ContainerFrame.BackgroundTransparency = 0.1
+ContainerFrame.Position = UDim2.new(0, 50, 0, 95)
+ContainerFrame.Size = UDim2.new(0, 220, 0, 390)
+
+local ContainerCorner = Instance.new("UICorner")
+ContainerCorner.CornerRadius = UDim.new(0, 8)
+ContainerCorner.Parent = ContainerFrame
+
+-- Biến cấu hình
+_G.SelectedRod = "Fishing Rod"
+_G.SelectedBait = "Kelp Bait"
+_G.AutoBuyBait = false
+_G.AutoFishing = false
+_G.AutoFishingQuest = false
+_G.AutoQuestComplete = false
+_G.AutoSellFish = false
+_G.AutoSkillZ = false
+_G.DangerSc = "Lv 1"
+_G.SailBoats = false
+_G.SelectedBoat = "Guardian"
+
+-- Hàm tạo hàng công tắc gạt (Switch Toggle)
+local function CreateToggleRow(name, posY, callback)
+    local rowFrame = Instance.new("Frame")
+    rowFrame.Parent = ContainerFrame
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    rowFrame.Position = UDim2.new(0, 10, 0, posY)
+    rowFrame.Size = UDim2.new(0, 200, 0, 35)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = rowFrame
+
+    local label = Instance.new("TextLabel")
+    label.Parent = rowFrame
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 120, 1, 0)
+    label.Font = Enum.Font.SourceSansSemibold
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local switchBg = Instance.new("TextButton")
+    switchBg.Parent = rowFrame
+    switchBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    switchBg.Position = UDim2.new(1, -45, 0.5, -10)
+    switchBg.Size = UDim2.new(0, 40, 0, 20)
+    switchBg.Text = ""
+    
+    local switchCorner = Instance.new("UICorner")
+    switchCorner.CornerRadius = UDim.new(1, 0)
+    switchCorner.Parent = switchBg
+
+    local switchCircle = Instance.new("Frame")
+    switchCircle.Parent = switchBg
+    switchCircle.BackgroundColor3 = Color3.fromRGB(140, 140, 160)
+    switchCircle.Position = UDim2.new(0, 2, 0.5, -8)
+    switchCircle.Size = UDim2.new(0, 16, 0, 16)
+    
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = switchCircle
+
+    local state = false
+    switchBg.MouseButton1Click:Connect(function()
+        state = not state
+        
+        local targetPos = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        local targetColor = state and Color3.fromRGB(100, 100, 255) or Color3.fromRGB(45, 45, 55)
+        local circleColor = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 160)
+
+        TweenService:Create(switchBg, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(switchCircle, TweenInfo.new(0.2), {Position = targetPos, BackgroundColor3 = circleColor}):Play()
+
+        callback(state)
+    end)
+end
+
+-- Hàm tạo hàng Dropdown
+local function CreateDropdownRow(name, posY, options, callback)
+    local rowFrame = Instance.new("Frame")
+    rowFrame.Parent = ContainerFrame
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    rowFrame.Position = UDim2.new(0, 10, 0, posY)
+    rowFrame.Size = UDim2.new(0, 200, 0, 35)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = rowFrame
+
+    local label = Instance.new("TextLabel")
+    label.Parent = rowFrame
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 80, 1, 0)
+    label.Font = Enum.Font.SourceSansSemibold
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local valueButton = Instance.new("TextButton")
+    valueButton.Parent = rowFrame
+    valueButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    valueButton.Position = UDim2.new(0, 90, 0.5, -12)
+    valueButton.Size = UDim2.new(0, 105, 0, 24)
+    valueButton.Font = Enum.Font.SourceSansBold
+    valueButton.Text = options[1]
+    valueButton.TextColor3 = Color3.fromRGB(180, 180, 255)
+    valueButton.TextSize = 11
+
+    local valCorner = Instance.new("UICorner")
+    valCorner.CornerRadius = UDim.new(0, 4)
+    valCorner.Parent = valueButton
+
+    local index = 1
+    valueButton.MouseButton1Click:Connect(function()
+        index = index + 1
+        if index > #options then index = 1 end
+        valueButton.Text = options[index]
+        callback(options[index])
+    end)
+end
+
+-- Danh sách các tính năng
+CreateDropdownRow("Rod:", 10, {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
+    _G.SelectedRod = val
+end)
+
+CreateDropdownRow("Bait:", 50, {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
+    _G.SelectedBait = val
+end)
+
+CreateToggleRow("Auto Fish", 90, function(val)
+    _G.AutoFishing = val
+end)
+
+CreateToggleRow("Auto Quest", 130, function(val)
+    _G.AutoFishingQuest = val
+end)
+
+CreateToggleRow("Auto Complete", 170, function(val)
+    _G.AutoQuestComplete = val
+    if val then  
+        pcall(function()  
+            local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
+            local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+            if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
+                RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "FinishQuest")  
+            end
+        end)  
+    end
+end)
+
+CreateToggleRow("Auto Sell Fish", 210, function(val)
+    _G.AutoSellFish = val
+    if val then
+        pcall(function()
+            local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
+            local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+            if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
+                RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "SellFish")
+            end
+        end)
+    end
+end)
+
+CreateToggleRow("Auto Skill Z", 250, function(val)
+    _G.AutoSkillZ = val
+end)
+
+-- Thêm 2 mục mới ông yêu cầu: Chọn vùng biển (Danger Zone) và Auto Lái Tàu (Sail Boats)
+local ListSeaZone = {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"}
+CreateDropdownRow("Sea Zone", 290, ListSeaZone, function(val)
+    _G.DangerSc = val
+end)
+
+CreateToggleRow("Sail Boats", 330, function(val)
+    _G.SailBoats = val
+end)
+
+-- Xử lý ẩn hiện menu chính
+local menuVisible = true
+MainToggleButton.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    ContainerFrame.Visible = menuVisible
+    if menuVisible then
+        MainToggleButton.Text = "Menu: ON"
+        MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    else
+        MainToggleButton.Text = "Menu: OFF"
+        MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
+    end
+end)
+
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local FishReplicated = ReplicatedStorage:WaitForChild("FishReplicated")
+local FishingRequest = FishReplicated:WaitForChild("FishingRequest")
+local Config = require(FishReplicated.FishingClient.Config)
+local GetWaterHeight = require(ReplicatedStorage.Util.GetWaterHeightAtLocation)
+local MaxDistance = Config.Rod.MaxLaunchDistance
+
+-- Vòng lặp Auto Fishing
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoFishing then
+            pcall(function()
+                local Char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local HRP = Char:FindFirstChild("HumanoidRootPart")
+                if not HRP then return end
+
+                local Tool = Char:FindFirstChildOfClass("Tool")  
+
+                if _G.SelectedRod and (not Tool or Tool.Name ~= _G.SelectedRod) then  
+                    local backpackTool = LocalPlayer.Backpack:FindFirstChild(_G.SelectedRod)  
+                    if backpackTool then  
+                        Char.Humanoid:EquipTool(backpackTool)  
+                        Tool = backpackTool  
+                    end  
+                end  
+
+                if Tool then  
+                    local waterHeight = GetWaterHeight(HRP.Position)  
+                    local _, hitPos = Workspace:FindPartOnRayWithIgnoreList(  
+                        Ray.new(Char.Head.Position, HRP.CFrame.LookVector * MaxDistance),  
+                        {Char, Workspace.Characters, Workspace.Enemies}  
+                    )  
+                    local TargetPos = hitPos and Vector3.new(hitPos.X, math.max(hitPos.Y, waterHeight), hitPos.Z)  
+                    local State = Tool:GetAttribute("State")  
+                    local ServerState = Tool:GetAttribute("ServerState")  
+
+                    if TargetPos and (State == "ReeledIn" or ServerState == "ReeledIn") then  
+                        FishingRequest:InvokeServer("StartCasting")  
+                        task.wait()  
+                        FishingRequest:InvokeServer("CastLineAtLocation", TargetPos, 100, true)  
+                    elseif ServerState == "Biting" then  
+                        FishingRequest:InvokeServer("Catching", true)  
+                        task.wait(0.1)  
+                        FishingRequest:InvokeServer("Catch", 1)  
+                    end  
+                end  
+            end) 
+        end  
+    end
+end)
+
+-- Vòng lặp Auto Fishing Quest
+local Players3 = game:GetService("Players")
+local LocalPlayer3 = Players3.LocalPlayer
+local ReplicatedStorage3 = game:GetService("ReplicatedStorage")
+local RFJobsRemoteFunction3 = ReplicatedStorage3.Modules.Net:WaitForChild("RF/JobsRemoteFunction")
+
+local function HasQuest3()
+    local questGui = LocalPlayer3.PlayerGui:FindFirstChild("Quest") or LocalPlayer3.PlayerGui:FindFirstChild("QuestGui")
+    if questGui and questGui:FindFirstChild("Container") and questGui.Container:FindFirstChild("QuestTitle") then
+        return true
+    end
+    return false
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if _G.AutoFishingQuest then
+            pcall(function()
+                if not HasQuest3() then
+                    RFJobsRemoteFunction3:InvokeServer("FishingNPC", "Angler", "AskQuest")
+                end
+            end)
+        end
+    end
+end)
+
+-- Vòng lặp Auto Sell Fish
+task.spawn(function()
+    while task.wait(5) do 
+        if _G.AutoSellFish then
+            pcall(function()
+                local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
+                local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+                if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
+                    RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "SellFish")
+                end
+            end)
+        end
+    end
+end)
+
+-- Vòng lặp Auto Skill Z
+local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
+local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoSkillZ then
+            pcall(function()
+                RFJobToolAbilities4:InvokeServer("Z", true)
+            end)
+        end
+    end
+end)
+
+-- Vòng lặp Sail Boats & Danger Zone ông gửi thêm
+local replicated = game:GetService("ReplicatedStorage")
+local plr = LocalPlayer
+
+-- Các hàm giả định phụ trợ nếu script gốc thiếu (để tránh lỗi crash)
+local function CheckBoat() return workspace:FindFirstChild("MyBoat") end
+local function CheckShark() return false end
+local function CheckTerrorShark() return false end
+local function CheckFishCrew() return false end
+local function CheckPiranha() return false end
+local function CheckEnemiesBoat() return false end
+local function CheckSeaBeast() return false end
+local function CheckPirateGrandBrigade() return false end
+local function CheckHauntedCrew() return false end
+local function CheckLeviathan() return false end
+local function TeleportToTarget(cf) if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then plr.Character.HumanoidRootPart.CFrame = cf end end
+local function _tp(cf) TeleportToTarget(cf) end
+
+spawn(function()
+  while wait() do
+    if _G.SailBoats then 
+      pcall(function()        
+        local myBoat = CheckBoat()
+        if not myBoat and not(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)and not(CheckEnemiesBoat()and _G.FishBoat)and not(CheckSeaBeast()and _G.SeaBeast1)and not(_G.PGB and CheckPirateGrandBrigade())and not(_G.HCM and CheckHauntedCrew())and not(_G.Leviathan1 and CheckLeviathan())then
+          local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
+          TeleportToTarget(buyBoatCFrame)
+          if (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 then replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) end
+        elseif myBoat and not(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)and not(CheckEnemiesBoat()and _G.FishBoat)and not(CheckSeaBeast()and _G.SeaBeast1)and not(_G.PGB and CheckPirateGrandBrigade())and not(_G.HCM and CheckHauntedCrew())and not(_G.Leviathan1 and CheckLeviathan())then
+          if plr.Character.Humanoid.Sit == false then
+            local boatSeatCFrame = myBoat.VehicleSeat.CFrame * CFrame.new(0, 1, 0)
+            _tp(boatSeatCFrame)
+          else                         
+            local CFrameSelectedZone
+            if _G.DangerSc == "Lv 1" then CFrameSelectedZone = CFrame.new(-21998.375, 30.0006084, -682.309143)
+            elseif _G.DangerSc == "Lv 2" then CFrameSelectedZone = CFrame.new(-26779.5215, 30.0005474, -822.858032)
+            elseif _G.DangerSc == "Lv 3" then CFrameSelectedZone = CFrame.new(-31171.957, 30.0001011, -2256.93774)
+            elseif _G.DangerSc == "Lv 4" then CFrameSelectedZone = CFrame.new(-34054.6875, 30.2187767, -2560.12012)
+            elseif _G.DangerSc == "Lv 5" then CFrameSelectedZone = CFrame.new(-38887.5547, 30.0004578, -2162.99023)
+            elseif _G.DangerSc == "Lv 6" then CFrameSelectedZone = CFrame.new(-44541.7617, 30.0003204, -1244.8584)
+            elseif _G.DangerSc == "Lv Infinite" then CFrameSelectedZone = CFrame.new(-10000000, 31, 37016.25)
+            end           
+            repeat wait() 
+              if (not _G.FishBoat and CheckEnemiesBoat()) or (not _G.PGB and CheckPirateGrandBrigade()) or (not _G.TerrorShark and CheckTerrorShark()) then
+                _tp(CFrameSelectedZone * CFrame.new(0,150,0))
+              else
+                _tp(CFrameSelectedZone)
+              end           
+            until _G.SailBoats==false or(CheckShark()and _G.Shark or CheckTerrorShark()and _G.TerrorShark or CheckFishCrew()and _G.MobCrew or CheckPiranha()and _G.Piranha)or CheckSeaBeast()and _G.SeaBeast1 or CheckEnemiesBoat()and _G.FishBoat or _G.Leviathan1 and CheckLeviathan() or _G.HCM and CheckHauntedCrew() or _G.PGB and CheckPirateGrandBrigade() or plr.Character:WaitForChild("Humanoid").Sit==false 
+            plr.Character.Humanoid.Sit = false
+          end
+        end
+      end)
+    end
+  end
+end)
+
+spawn(function()
+    while wait(1) do 
+        pcall(function()
+            if workspace:FindFirstChild("Boats") then
+                for a,b in pairs(workspace.Boats:GetChildren()) do 
+                    for c,d in pairs(workspace.Boats[b.Name]:GetDescendants()) do 
+                        if d:IsA("BasePart") then 
+                            if _G.SailBoats then 
+                                d.CanCollide = false 
+                            else 
+                                d.CanCollide = true 
+                            end 
+                        end 
+                    end 
+                end
+            end
+        end) 
+    end 
+end)
