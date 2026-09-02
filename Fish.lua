@@ -345,13 +345,13 @@ local plr = LocalPlayer
 
 local function CheckBoat() return workspace:FindFirstChild("MyBoat") end
 local function CheckShark() return false end
-local function CheckTerrorShark() return true end
+local function CheckTerrorShark() return false end
 local function CheckFishCrew() return false end
 local function CheckPiranha() return false end
 local function CheckEnemiesBoat() return false end
 local function CheckSeaBeast() return false end
-local function CheckPirateGrandBrigade() return true end
-local function CheckHauntedCrew() return true end
+local function CheckPirateGrandBrigade() return false end
+local function CheckHauntedCrew() return false end
 local function CheckLeviathan() return false end
 local function TeleportToTarget(cf) if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then plr.Character.HumanoidRootPart.CFrame = cf end end
 local function _tp(cf) TeleportToTarget(cf) end
