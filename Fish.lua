@@ -67,7 +67,7 @@ ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ContainerFrame.BackgroundTransparency = 0.1
 ContainerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 ContainerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-ContainerFrame.Size = UDim2.new(0, 235, 0, 300)
+ContainerFrame.Size = UDim2.new(0, 235, 0, 270)
 ContainerFrame.Visible = false
 
 local ContainerCorner = Instance.new("UICorner")
@@ -79,7 +79,7 @@ local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Parent = ContainerFrame
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
-ScrollingFrame.Size = UDim2.new(0, 225, 0, 290)
+ScrollingFrame.Size = UDim2.new(0, 225, 0, 260)
 ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ScrollBarThickness = 4
@@ -93,19 +93,13 @@ UIListLayout.Padding = UDim.new(0, 5)
 
 -- Biến cấu hình
 _G.SelectedRod = "Fishing Rod"
-_G.SelectedBait = "Basic Bait"
+_G.SelectedBait = "Kelp Bait"
 _G.AutoBuyBait = false
 _G.AutoFishing = false
 _G.AutoFishingQuest = false
 _G.AutoQuestComplete = false
 _G.AutoSellFish = false
 _G.AutoSkillZ = false
-_G.DangerSc = "Lv Infinite"
-_G.SailBoats = false
-_G.SelectedBoat = "MarineSloop"
-_G.BoatSpeed = 250
-
-local ListSeaBoat = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"}
 
 -- Biến đếm LayoutOrder tự động tăng
 local CurrentLayoutOrder = 0
@@ -219,7 +213,7 @@ local function CreateDropdownRow(name, options, callback)
     end)
 end
 
--- Thêm các mục vào menu
+-- Thêm các mục cần thiết vào menu
 CreateDropdownRow("Rod:", {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
     _G.SelectedRod = val
 end)
@@ -250,18 +244,6 @@ end)
 
 CreateToggleRow("Auto Skill Z", function(val)
     _G.AutoSkillZ = val
-end)
-
-CreateDropdownRow("Sea Zone", {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"}, function(val)
-    _G.DangerSc = val
-end)
-
-CreateDropdownRow("Boat Type", ListSeaBoat, function(val)
-    _G.SelectedBoat = val
-end)
-
-CreateToggleRow("Sail Boats", function(val)
-    _G.SailBoats = val
 end)
 
 -- Xử lý ẩn hiện menu chính từ nút tròn
@@ -329,30 +311,28 @@ task.spawn(function()
         end  
     end
 end)
-
--- Vòng lặp Auto Buy Bait
+-- Vòng lặp Auto Craft Bait (Chế tạo mồi tự động theo loại đã chọn)
 task.spawn(function()
-    while task.wait(5) do
+    while task.wait(3) do
         if _G.AutoBuyBait then
             pcall(function()
-                local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
-                local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
-                if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
-                    RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "BuyBait", _G.SelectedBait)
-                end
+                local args = {
+                    "Craft",
+                    _G.SelectedBait,
+                    1,
+                    {}
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/Craft"):InvokeServer(unpack(args))
             end)
         end
     end
 end)
 
 -- Vòng lặp Auto Fishing Quest
-local Players3 = game:GetService("Players")
-local LocalPlayer3 = Players3.LocalPlayer
-local ReplicatedStorage3 = game:GetService("ReplicatedStorage")
-local RFJobsRemoteFunction3 = ReplicatedStorage3.Modules.Net:WaitForChild("RF/JobsRemoteFunction")
+local RFJobsRemoteFunction3 = ReplicatedStorage.Modules.Net:WaitForChild("RF/JobsRemoteFunction")
 
 local function HasQuest3()
-    local questGui = LocalPlayer3.PlayerGui:FindFirstChild("Quest") or LocalPlayer3.PlayerGui:FindFirstChild("QuestGui")
+    local questGui = LocalPlayer.PlayerGui:FindFirstChild("Quest") or LocalPlayer.PlayerGui:FindFirstChild("QuestGui")
     if questGui and questGui:FindFirstChild("Container") and questGui.Container:FindFirstChild("QuestTitle") then
         return true
     end
@@ -376,8 +356,7 @@ task.spawn(function()
     while task.wait(5) do 
         if _G.AutoQuestComplete then
             pcall(function()
-                local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
-                local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+                local RemotesTemp = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
                 if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
                     RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "FinishQuest")
                 end
@@ -391,8 +370,7 @@ task.spawn(function()
     while task.wait(5) do 
         if _G.AutoSellFish then
             pcall(function()
-                local ReplicatedStorageTemp = game:GetService("ReplicatedStorage")
-                local RemotesTemp = ReplicatedStorageTemp:FindFirstChild("Modules") and ReplicatedStorageTemp.Modules:FindFirstChild("Net")
+                local RemotesTemp = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
                 if RemotesTemp and RemotesTemp:FindFirstChild("RF/JobsRemoteFunction") then
                     RemotesTemp["RF/JobsRemoteFunction"]:InvokeServer("FishingNPC", "SellFish")
                 end
@@ -402,8 +380,7 @@ task.spawn(function()
 end)
 
 -- Vòng lặp Auto Skill Z
-local ReplicatedStorage4 = game:GetService("ReplicatedStorage")
-local RFJobToolAbilities4 = ReplicatedStorage4.Modules.Net:WaitForChild("RF/JobToolAbilities")
+local RFJobToolAbilities4 = ReplicatedStorage.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
     while task.wait(0.5) do
@@ -413,143 +390,4 @@ task.spawn(function()
             end)
         end
     end
-end)
--- Vòng lặp Sail Boats & Danger Zone (Đã sửa triệt để lỗi quét nhầm thuyền và mua lặp)
-local replicated = game:GetService("ReplicatedStorage")
-local plr = LocalPlayer
-
-local function CheckBoat() 
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    
-    local boatsFolder = workspace:FindFirstChild("Boats")
-    if boatsFolder then
-        -- Ưu tiên 1: Tìm thuyền nào có ghế ngồi ở gần nhân vật (bán kính 200 studs)
-        for _, boat in pairs(boatsFolder:GetChildren()) do
-            local seat = boat:FindFirstChild("VehicleSeat") or boat:FindFirstChildWhichIsA("VehicleSeat", true)
-            if seat and (seat.Position - char.HumanoidRootPart.Position).Magnitude < 200 then
-                return boat
-            end
-        end
-        
-        -- Ưu tiên 2: Nếu ở xa, quét toàn bộ xem có thuyền nào đúng tên Owner của mình không
-        for _, boat in pairs(boatsFolder:GetChildren()) do
-            local ownerVal = boat:FindFirstChild("Owner")
-            if ownerVal and ownerVal.Value == plr.Name then
-                return boat
-            end
-        end
-    end
-    
-    -- Dự phòng kiểm tra thư mục MyBoat
-    local myBoat = workspace:FindFirstChild("MyBoat")
-    if myBoat then return myBoat end
-    
-    return nil
-end
-
-local function CheckShark() return false end
-local function CheckTerrorShark() return false end
-local function CheckFishCrew() return false end
-local function CheckPiranha() return false end
-local function CheckEnemiesBoat() return false end
-local function CheckSeaBeast() return false end
-local function CheckPirateGrandBrigade() return false end
-local function CheckHauntedCrew() return false end
-local function CheckLeviathan() return false end
-
-local function LerpToTarget(targetCFrame)
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = _G.BoatSpeed or 250
-    local timeToReach = distance / speed
-    
-    local startTime = tick()
-    local startCFrame = hrp.CFrame
-    
-    while tick() - startTime < timeToReach do
-        if not _G.SailBoats then break end
-        local alpha = (tick() - startTime) / timeToReach
-        hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-        RunService.Heartbeat:Wait()
-    end
-    if _G.SailBoats then
-        hrp.CFrame = targetCFrame
-    end
-end
-
-local function TeleportToTarget(cf) LerpToTarget(cf) end
-local function _tp(cf) LerpToTarget(cf) end
-
-spawn(function()
-  while task.wait(0.5) do
-    if _G.SailBoats then 
-      pcall(function()        
-        local myBoat = CheckBoat()
-        if not myBoat then
-          -- Chỉ khi hoàn toàn không có thuyền quanh đó mới ra bến mua
-          local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
-          TeleportToTarget(buyBoatCFrame)
-          if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 15 then 
-              replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
-              task.wait(2.5) -- Tăng thời gian chờ game tạo thuyền xong hẳn
-          end
-        else
-          -- Nếu đã tìm thấy thuyền nhưng chưa ngồi lên (hoặc lỡ bấm nhảy ra)
-          if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false then
-            local vehicleSeat = myBoat:FindFirstChild("VehicleSeat") or myBoat:FindFirstChildWhichIsA("VehicleSeat", true)
-            if vehicleSeat then
-                local boatSeatCFrame = vehicleSeat.CFrame * CFrame.new(0, 3, 0)
-                _tp(boatSeatCFrame)
-                task.wait(0.5)
-                if plr.Character:FindFirstChild("HumanoidRootPart") then
-                    plr.Character.HumanoidRootPart.CFrame = boatSeatCFrame
-                end
-            end
-          else                         
-            -- Đang ngồi trên thuyền, tiến hành di chuyển ra Danger Zone
-            local CFrameSelectedZone
-            if _G.DangerSc == "Lv 1" then CFrameSelectedZone = CFrame.new(-21998.375, 30.0006084, -682.309143)
-            elseif _G.DangerSc == "Lv 2" then CFrameSelectedZone = CFrame.new(-26779.5215, 30.0005474, -822.858032)
-            elseif _G.DangerSc == "Lv 3" then CFrameSelectedZone = CFrame.new(-31171.957, 30.0001011, -2256.93774)
-            elseif _G.DangerSc == "Lv 4" then CFrameSelectedZone = CFrame.new(-34054.6875, 30.2187767, -2560.12012)
-            elseif _G.DangerSc == "Lv 5" then CFrameSelectedZone = CFrame.new(-38887.5547, 30.0004578, -2162.99023)
-            elseif _G.DangerSc == "Lv 6" then CFrameSelectedZone = CFrame.new(-44541.7617, 30.0003204, -1244.8584)
-            elseif _G.DangerSc == "Lv Infinite" then CFrameSelectedZone = CFrame.new(-10000000, 31, 37016.25)
-            end           
-            
-            repeat 
-              task.wait() 
-              if _G.SailBoats then
-                  _tp(CFrameSelectedZone)
-              end
-            until _G.SailBoats == false or (plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false) 
-            
-            if not _G.SailBoats and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-                plr.Character.Humanoid.Sit = false
-            end
-          end
-        end
-      end)
-    end
-  end
-end)
-
-spawn(function()
-    while task.wait(1) do 
-        pcall(function()
-            if workspace:FindFirstChild("Boats") then
-                for _, b in pairs(workspace.Boats:GetChildren()) do 
-                    for _, d in pairs(b:GetDescendants()) do 
-                        if d:IsA("BasePart") then 
-                            d.CanCollide = not _G.SailBoats
-                        end 
-                    end 
-                end
-            end
-        end) 
-    end 
 end)
