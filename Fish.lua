@@ -5,74 +5,65 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
+-- Tự động dọn dẹp các GUI cũ (Clear Gui OLD) để tránh bị lỗi chồng chéo
+pcall(function()
+    for _, gui in pairs(PlayerGui:GetChildren()) do
+        if gui.Name == "SimpleAutoFishGui" then
+            gui:Destroy()
+        end
+    end
+end)
+
 -- Tạo GUI chính
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SimpleAutoFishGui"
 ScreenGui.Parent = PlayerGui
 
--- Nút ẩn/hiện menu chính (Hình tròn 30x30, có thể kéo thả di chuyển)
-local MainToggleButton = Instance.new("TextButton")
-MainToggleButton.Name = "MainToggleButton"
-MainToggleButton.Parent = ScreenGui
-MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
-MainToggleButton.Position = UDim2.new(0.5, -15, 0, 40)
-MainToggleButton.Size = UDim2.new(0, 30, 0, 30)
-MainToggleButton.Font = Enum.Font.SourceSansBold
-MainToggleButton.Text = "OFF"
-MainToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainToggleButton.TextSize = 9
+-- Nút ẩn/hiện menu chính
+local ToggleButton = Instance.new("ImageButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 30, 0, 30)
+ToggleButton.Position = UDim2.new(0.015, 0, 0.2, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleButton.BackgroundTransparency = 0.05
+ToggleButton.Image = "rbxassetid://77399452392419"
+ToggleButton.ScaleType = Enum.ScaleType.Crop
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+ToggleButton.ClipsDescendants = true
+ToggleButton.AutoButtonColor = false
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(1, 0)
-MainCorner.Parent = MainToggleButton
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleButton.Parent = ToggleButton
 
--- Tính năng kéo thả di chuyển nút tròn
-local dragging, dragInput, dragStart, startPos
-MainToggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainToggleButton.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Parent = ToggleButton
+ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+ToggleStroke.Thickness = 1.5
 
-MainToggleButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainToggleButton.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Frame chứa ScrollingFrame (Canh ra giữa màn hình)
+-- Frame chứa ScrollingFrame (Canh ra giữa màn hình, cấu hình trạng thái ban đầu để Tween)
 local ContainerFrame = Instance.new("Frame")
 ContainerFrame.Name = "ContainerFrame"
 ContainerFrame.Parent = ScreenGui
 ContainerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-ContainerFrame.BackgroundTransparency = 0.1
+ContainerFrame.BackgroundTransparency = 1 -- Bắt đầu bằng trong suốt
 ContainerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 ContainerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-ContainerFrame.Size = UDim2.new(0, 235, 0, 270)
+ContainerFrame.Size = UDim2.new(0, 0, 0, 0) -- Bắt đầu với kích thước 0 để hiệu ứng phóng to mượt hơn
 ContainerFrame.Visible = false
+ContainerFrame.ClipsDescendants = true
 
 local ContainerCorner = Instance.new("UICorner")
 ContainerCorner.CornerRadius = UDim.new(0, 8)
 ContainerCorner.Parent = ContainerFrame
+
+-- Thêm viền màu xanh dương cho bảng menu
+local ContainerStroke = Instance.new("UIStroke")
+ContainerStroke.Parent = ContainerFrame
+ContainerStroke.Color = Color3.fromRGB(0, 160, 255)
+ContainerStroke.Thickness = 2
 
 -- Thanh cuộn ScrollingFrame bên trong
 local ScrollingFrame = Instance.new("ScrollingFrame")
@@ -91,9 +82,9 @@ UIListLayout.Parent = ScrollingFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 5)
 
--- Biến cấu hình
+-- Biến cấu hình (Mồi mặc định là Basic Bait)
 _G.SelectedRod = "Fishing Rod"
-_G.SelectedBait = "Kelp Bait"
+_G.SelectedBait = "Basic Bait"
 _G.AutoBuyBait = false
 _G.AutoFishing = false
 _G.AutoFishingQuest = false
@@ -166,7 +157,7 @@ local function CreateToggleRow(name, callback)
 end
 
 -- Hàm tạo hàng Dropdown
-local function CreateDropdownRow(name, options, callback)
+local function CreateDropdownRow(name, options, defaultVal, callback)
     CurrentLayoutOrder = CurrentLayoutOrder + 1
     
     local rowFrame = Instance.new("Frame")
@@ -196,7 +187,7 @@ local function CreateDropdownRow(name, options, callback)
     valueButton.Position = UDim2.new(0, 95, 0.5, -12)
     valueButton.Size = UDim2.new(0, 110, 0, 24)
     valueButton.Font = Enum.Font.SourceSansBold
-    valueButton.Text = options[1]
+    valueButton.Text = defaultVal
     valueButton.TextColor3 = Color3.fromRGB(180, 180, 255)
     valueButton.TextSize = 10
 
@@ -205,6 +196,13 @@ local function CreateDropdownRow(name, options, callback)
     valCorner.Parent = valueButton
 
     local index = 1
+    for i, opt in ipairs(options) do
+        if opt == defaultVal then
+            index = i
+            break
+        end
+    end
+
     valueButton.MouseButton1Click:Connect(function()
         index = index + 1
         if index > #options then index = 1 end
@@ -213,16 +211,60 @@ local function CreateDropdownRow(name, options, callback)
     end)
 end
 
--- Thêm các mục cần thiết vào menu
-CreateDropdownRow("Rod:", {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, function(val)
+-- Hàm tạo nút bấm chức năng
+local function CreateButtonRow(name, buttonText, callback)
+    CurrentLayoutOrder = CurrentLayoutOrder + 1
+    
+    local rowFrame = Instance.new("Frame")
+    rowFrame.Parent = ScrollingFrame
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    rowFrame.Size = UDim2.new(0, 215, 0, 35)
+    rowFrame.LayoutOrder = CurrentLayoutOrder
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = rowFrame
+
+    local label = Instance.new("TextLabel")
+    label.Parent = rowFrame
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 90, 1, 0)
+    label.Font = Enum.Font.SourceSansSemibold
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local actionButton = Instance.new("TextButton")
+    actionButton.Parent = rowFrame
+    actionButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    actionButton.Position = UDim2.new(0, 105, 0.5, -12)
+    actionButton.Size = UDim2.new(0, 100, 0, 24)
+    actionButton.Font = Enum.Font.SourceSansBold
+    actionButton.Text = buttonText
+    actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    actionButton.TextSize = 11
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = actionButton
+
+    actionButton.MouseButton1Click:Connect(function()
+        callback()
+    end)
+end
+
+-- Thêm các mục vào menu
+CreateDropdownRow("Rod:", {"Fishing Rod", "Gold Rod", "Shark Rod", "Shell Rod", "Treasure Rod"}, "Fishing Rod", function(val)
     _G.SelectedRod = val
 end)
 
-CreateDropdownRow("Bait:", {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, function(val)
+CreateDropdownRow("Bait:", {"Basic Bait", "Kelp Bait", "Good Bait", "Abyssal Bait", "Frozen Bait", "Epic Bait", "Carnivore Bait"}, "Basic Bait", function(val)
     _G.SelectedBait = val
 end)
 
-CreateToggleRow("Auto Buy Bait", function(val)
+CreateToggleRow("Auto Craft Bait", function(val)
     _G.AutoBuyBait = val
 end)
 
@@ -246,18 +288,51 @@ CreateToggleRow("Auto Skill Z", function(val)
     _G.AutoSkillZ = val
 end)
 
--- Xử lý ẩn hiện menu chính từ nút tròn
+CreateButtonRow("Clear Gui:", "Delete OLD", function()
+    pcall(function()
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui.Name == "SimpleAutoFishGui" and gui ~= ScreenGui then
+                gui:Destroy()
+            end
+        end
+        ScreenGui:Destroy()
+    end)
+end)
+
+-- Xử lý ẩn hiện menu chính kết hợp TweenService 0.5 giây
 local menuVisible = false
-MainToggleButton.MouseButton1Click:Connect(function()
+local isTweening = false
+
+ToggleButton.MouseButton1Click:Connect(function()
+    if isTweening then return end
     menuVisible = not menuVisible
-    ContainerFrame.Visible = menuVisible
+    isTweening = true
+
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
     if menuVisible then
-        MainToggleButton.Text = "ON"
-        MainToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+        ContainerFrame.Visible = true
+        ToggleStroke.Color = Color3.fromRGB(255, 100, 100)
+        
+        local openTween = TweenService:Create(ContainerFrame, tweenInfo, {
+            Size = UDim2.new(0, 235, 0, 270),
+            BackgroundTransparency = 0.1
+        })
+        openTween:Play()
+        openTween.Completed:Wait()
     else
-        MainToggleButton.Text = "OFF"
-        MainToggleButton.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
+        ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+        
+        local closeTween = TweenService:Create(ContainerFrame, tweenInfo, {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        })
+        closeTween:Play()
+        closeTween.Completed:Wait()
+        ContainerFrame.Visible = false
     end
+    
+    isTweening = false
 end)
 
 local Workspace = game:GetService("Workspace")
@@ -311,7 +386,8 @@ task.spawn(function()
         end  
     end
 end)
--- Vòng lặp Auto Craft Bait (Chế tạo mồi tự động theo loại đã chọn)
+
+-- Vòng lặp Auto Craft Bait
 task.spawn(function()
     while task.wait(3) do
         if _G.AutoBuyBait then
@@ -383,7 +459,7 @@ end)
 local RFJobToolAbilities4 = ReplicatedStorage.Modules.Net:WaitForChild("RF/JobToolAbilities")
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         if _G.AutoSkillZ then
             pcall(function()
                 RFJobToolAbilities4:InvokeServer("Z", true)
