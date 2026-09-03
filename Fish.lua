@@ -414,14 +414,25 @@ task.spawn(function()
         end
     end
 end)
--- Vòng lặp Sail Boats & Danger Zone (Đã sửa lỗi tele lung tung và lỗi check mất thuyền cũ)
+-- Vòng lặp Sail Boats & Danger Zone (Đã sửa triệt để lỗi quét nhầm thuyền và mua lặp)
 local replicated = game:GetService("ReplicatedStorage")
 local plr = LocalPlayer
 
 local function CheckBoat() 
-    -- Kiểm tra thư mục Boats chính hãng của Blox Fruits xem có thuyền của mình không
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    
     local boatsFolder = workspace:FindFirstChild("Boats")
     if boatsFolder then
+        -- Ưu tiên 1: Tìm thuyền nào có ghế ngồi ở gần nhân vật (bán kính 200 studs)
+        for _, boat in pairs(boatsFolder:GetChildren()) do
+            local seat = boat:FindFirstChild("VehicleSeat") or boat:FindFirstChildWhichIsA("VehicleSeat", true)
+            if seat and (seat.Position - char.HumanoidRootPart.Position).Magnitude < 200 then
+                return boat
+            end
+        end
+        
+        -- Ưu tiên 2: Nếu ở xa, quét toàn bộ xem có thuyền nào đúng tên Owner của mình không
         for _, boat in pairs(boatsFolder:GetChildren()) do
             local ownerVal = boat:FindFirstChild("Owner")
             if ownerVal and ownerVal.Value == plr.Name then
@@ -479,15 +490,15 @@ spawn(function()
       pcall(function()        
         local myBoat = CheckBoat()
         if not myBoat then
-          -- Nếu hoàn toàn không có thuyền trên map mới tiến hành đi mua
+          -- Chỉ khi hoàn toàn không có thuyền quanh đó mới ra bến mua
           local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
           TeleportToTarget(buyBoatCFrame)
           if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 15 then 
               replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
-              task.wait(2) -- Chờ thuyền khởi tạo xong
+              task.wait(2.5) -- Tăng thời gian chờ game tạo thuyền xong hẳn
           end
         else
-          -- Nếu đã có thuyền nhưng nhân vật chưa ngồi lên ghế lái (lỡ bấm nhảy ra ngoài)
+          -- Nếu đã tìm thấy thuyền nhưng chưa ngồi lên (hoặc lỡ bấm nhảy ra)
           if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Sit == false then
             local vehicleSeat = myBoat:FindFirstChild("VehicleSeat") or myBoat:FindFirstChildWhichIsA("VehicleSeat", true)
             if vehicleSeat then
@@ -499,7 +510,7 @@ spawn(function()
                 end
             end
           else                         
-            -- Đã ngồi trên thuyền, tiến hành di chuyển đến Danger Zone đã chọn
+            -- Đang ngồi trên thuyền, tiến hành di chuyển ra Danger Zone
             local CFrameSelectedZone
             if _G.DangerSc == "Lv 1" then CFrameSelectedZone = CFrame.new(-21998.375, 30.0006084, -682.309143)
             elseif _G.DangerSc == "Lv 2" then CFrameSelectedZone = CFrame.new(-26779.5215, 30.0005474, -822.858032)
