@@ -19,7 +19,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SimpleAutoFishGui"
 ScreenGui.Parent = PlayerGui
 
--- Nút ẩn/hiện menu chính
+-- Nút ẩn/hiện menu chính (Đã sửa lỗi không bấm được do xung đột Draggable)
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = ScreenGui
@@ -30,9 +30,57 @@ ToggleButton.BackgroundTransparency = 0.05
 ToggleButton.Image = "rbxassetid://77399452392419"
 ToggleButton.ScaleType = Enum.ScaleType.Crop
 ToggleButton.Active = true
-ToggleButton.Draggable = true
+ToggleButton.Draggable = false -- Tắt mặc định để tránh lỗi xung đột click
 ToggleButton.ClipsDescendants = true
 ToggleButton.AutoButtonColor = false
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleButton.Parent = ToggleButton
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Parent = ToggleButton
+ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+ToggleStroke.Thickness = 1.5
+
+-- Tự viết code kéo thả (vừa kéo được, vừa bấm mở menu mượt mà)
+local dragging, dragInput, dragStart, startPos, hasMoved = false, nil, nil, nil, false
+
+ToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        hasMoved = false
+        dragStart = input.Position
+        startPos = ToggleButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+ToggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        if delta.Magnitude > 5 then -- Nếu dịch chuyển quá 5 pixel thì tính là đang kéo
+            hasMoved = true
+        end
+        ToggleButton.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(1, 0)
