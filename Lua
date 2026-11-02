@@ -36,10 +36,13 @@ local PAUSE_TIME=1
 local WEAPON_DISTANCE=15
 local PUMPKIN_GROUP_DISTANCE=3
 local ESP_DISTANCE=10000
+local JACK_DISTANCE=100
+local ATTACK_INTERVAL=0.01
 
 local Flying=false
 local ESPEnabled=false
 local CurrentTarget=nil
+local CurrentTargetType=nil
 local PauseUntil=0
 local LastExpectedPosition=nil
 local LastWeaponEquip=0
@@ -298,64 +301,183 @@ local function validPumpkin(Object)
  return Part and Part.Parent
 end
 
-local function getAllPumpkins()
- local FolderNow=getFolder()
- if not FolderNow then return {} end
-
- local Pumpkins={}
-
- for _,v in ipairs(FolderNow:GetDescendants()) do
-  if validPumpkin(v) then
-   table.insert(Pumpkins,v)
-  end
- end
-
- return Pumpkins
+local function isJackOLantern(Object)
+	if not Object or not Object.Parent then return false end
+	return string.find(string.lower(Object.Name),"jack o' lantern",1,true)~=nil
 end
 
-local function getNearestPumpkin()
- local Root=getRoot()
- if not Root then return nil end
-
- local Nearest=nil
- local NearestDistance=math.huge
-
- for _,v in ipairs(getAllPumpkins()) do
-  local Part=getPart(v)
-  if Part then
-   local Distance=(Root.Position-Part.Position).Magnitude
-   if Distance<NearestDistance then
-    NearestDistance=Distance
-    Nearest=v
-   end
-  end
- end
-
- return Nearest
+local function getJackPart(Object)
+	if not Object then return nil end
+	if Object:IsA("BasePart") then return Object end
+	if Object:IsA("Model") then
+		if Object.PrimaryPart then return Object.PrimaryPart end
+		local HRP=Object:FindFirstChild("HumanoidRootPart",true)
+		if HRP and HRP:IsA("BasePart") then return HRP end
+		return Object:FindFirstChildWhichIsA("BasePart",true)
+	end
+	return Object:FindFirstChildWhichIsA("BasePart",true)
 end
 
-local function getPumpkinGroups()
-	local AllPumpkins=getAllPumpkins()
-	local Groups={}
+local function getJackHumanoid(Object)
+	if not Object then return nil end
+	if Object:IsA("Model") then
+		return Object:FindFirstChildOfClass("Humanoid")
+	end
+	return Object:FindFirstChildOfClass("Humanoid",true)
+end
+
+local function validJack(Object)
+	if not Object or not Object.Parent or not isJackOLantern(Object) then return false end
+	local Part=getJackPart(Object)
+	local Humanoid=getJackHumanoid(Object)
+	return Part and Part.Parent and Humanoid and Humanoid.Health>0
+end
+
+local function isPumpkinSnowman(Object)
+	if not Object or not Object.Parent then return false end
+	return string.find(string.lower(Object.Name),"pumpkin snowman",1,true)~=nil
+end
+
+local function validPumpkinSnowman(Object)
+	if not Object or not Object.Parent or not isPumpkinSnowman(Object) then return false end
+	local Part=getJackPart(Object)
+	local Humanoid=getJackHumanoid(Object)
+	return Part and Part.Parent and Humanoid and Humanoid.Health>0
+end
+
+local function getNearestJack()
 	local Root=getRoot()
-	if not Root then return Groups end
+	if not Root then return nil end
 
-	for _,Pumpkin in ipairs(AllPumpkins) do
-		local Part=getPart(Pumpkin)
-		if Part and (Part.Position-Root.Position).Magnitude<=ESP_DISTANCE then
-			table.insert(Groups,{Pumpkin})
+	local Enemies=workspace:FindFirstChild("Enemies")
+	if not Enemies then return nil end
+
+	local Nearest=nil
+	local NearestDistance=JACK_DISTANCE
+
+	for _,v in ipairs(Enemies:GetChildren()) do
+		if validJack(v) then
+			local Part=getJackPart(v)
+			local Distance=(Part.Position-Root.Position).Magnitude
+
+			if Distance<=NearestDistance then
+				NearestDistance=Distance
+				Nearest=v
+			end
 		end
 	end
 
-	return Groups
+	return Nearest
 end
 
-local function removePumpkinESP()
- for _,Data in ipairs(PumpkinESPList) do
-  if Data.Highlight then Data.Highlight:Destroy() end
-  if Data.Billboard then Data.Billboard:Destroy() end
- end
- table.clear(PumpkinESPList)
+local function getNearestPumpkinSnowman()
+	local Root=getRoot()
+	if not Root then return nil end
+
+	local Enemies=workspace:FindFirstChild("Enemies")
+	if not Enemies then return nil end
+
+	local Nearest=nil
+	local NearestDistance=math.huge
+
+	for _,v in ipairs(Enemies:GetChildren()) do
+		if validPumpkinSnowman(v) then
+			local Part=getJackPart(v)
+			local Distance=(Part.Position-Root.Position).Magnitude
+
+			if Distance<NearestDistance then
+				NearestDistance=Distance
+				Nearest=v
+			end
+		end
+	end
+
+	return Nearest
+end
+
+local function AttackEnemyTarget(Target)
+	if not Target or not Target.Parent then return end
+
+	local Character=LocalPlayer.Character
+	if not Character then return end
+
+	local Tool=Character:FindFirstChildOfClass("Tool")
+	if not Tool then return end
+
+	local Humanoid=Target:FindFirstChildOfClass("Humanoid")
+	if not Humanoid or Humanoid.Health<=0 then return end
+
+	local TargetPart=Target:FindFirstChild("Head") or Target:FindFirstChild("UpperTorso") or Target:FindFirstChild("HumanoidRootPart")
+	if not TargetPart then return end
+
+	local Targets={{Target,TargetPart}}
+
+	pcall(function()
+		if RemoteAttack then
+			RemoteAttack:FireServer(0.000000001)
+		end
+		if RemoteHit then
+			RemoteHit:FireServer(TargetPart,Targets)
+		end
+	end)
+end
+
+local function getAllPumpkins()
+	local FolderNow=getFolder()
+	if not FolderNow then return {} end
+
+	local Root=getRoot()
+	if not Root then return {} end
+
+	local RawPumpkins={}
+
+	for _,v in ipairs(FolderNow:GetDescendants()) do
+		if validPumpkin(v) then
+			local Part=getPart(v)
+			if Part and (Part.Position-Root.Position).Magnitude<=ESP_DISTANCE then
+				table.insert(RawPumpkins,{
+					Object=v,
+					Part=Part
+				})
+			end
+		end
+	end
+
+	local Pumpkins={}
+	local Used={}
+
+	for i,Data in ipairs(RawPumpkins) do
+		if not Used[i] then
+			Used[i]=true
+
+			local Best=Data
+
+			for j=1,#RawPumpkins do
+				if not Used[j] then
+					local Other=RawPumpkins[j]
+
+					if (Other.Part.Position-Best.Part.Position).Magnitude<=PUMPKIN_GROUP_DISTANCE then
+						Used[j]=true
+					end
+				end
+			end
+
+			table.insert(Pumpkins,Best.Object)
+		end
+	end
+
+	return Pumpkins
+end
+
+local function getPumpkinGroups()
+	local Pumpkins=getAllPumpkins()
+	local Groups={}
+
+	for _,Pumpkin in ipairs(Pumpkins) do
+		table.insert(Groups,{Pumpkin})
+	end
+
+	return Groups
 end
 
 local function createPumpkinGroupESP(Group)
@@ -420,13 +542,22 @@ local function createPumpkinGroupESP(Group)
 	})
 end
 
+local function removePumpkinESP()
+	for i=#PumpkinESPList,1,-1 do
+		local Data=PumpkinESPList[i]
+		if Data.Highlight then Data.Highlight:Destroy() end
+		if Data.Billboard then Data.Billboard:Destroy() end
+		table.remove(PumpkinESPList,i)
+	end
+end
+
 local function updatePumpkinESP()
 	if not ESPEnabled then
 		removePumpkinESP()
 		return
 	end
 
-	local Groups=getPumpkinGroups()
+	local Pumpkins=getAllPumpkins()
 	local Existing={}
 
 	for _,Data in ipairs(PumpkinESPList) do
@@ -437,12 +568,11 @@ local function updatePumpkinESP()
 
 	local NewMain={}
 
-	for _,Group in ipairs(Groups) do
-		local MainPumpkin=Group[1]
-		NewMain[MainPumpkin]=true
+	for _,Pumpkin in ipairs(Pumpkins) do
+		NewMain[Pumpkin]=true
 
-		if not Existing[MainPumpkin] then
-			createPumpkinGroupESP(Group)
+		if not Existing[Pumpkin] then
+			createPumpkinGroupESP({Pumpkin})
 		end
 	end
 
@@ -695,56 +825,122 @@ RunService.Heartbeat:Connect(function(DT)
   return
  end
 
- if not CurrentTarget or not validPumpkin(CurrentTarget) then
-  CurrentTarget=getNearestPumpkin()
-  LastExpectedPosition=Root.Position
+local JackTarget=getNearestJack()
 
-  if CurrentTarget then
-   Status.Text="Target: "..CurrentTarget.Name
-  else
-   Status.Text="Không có Pumpkin"
-   return
-  end
- end
+if JackTarget then
+	CurrentTarget=JackTarget
+	CurrentTargetType="Jack"
+	LastExpectedPosition=Root.Position
+	Status.Text="Jack: "..CurrentTarget.Name
+elseif not CurrentTarget or CurrentTargetType=="Jack" or not validPumpkin(CurrentTarget) then
+	CurrentTarget=getNearestPumpkin()
+	CurrentTargetType="Pumpkin"
+	LastExpectedPosition=Root.Position
 
- local TargetPart=getPart(CurrentTarget)
- if not TargetPart then
-  CurrentTarget=nil
-  return
- end
+	if CurrentTarget then
+		Status.Text="Target: "..CurrentTarget.Name
+	else
+		Status.Text="Không có Pumpkin"
+		return
+	end
+end
+
+ local TargetPart
+if CurrentTargetType=="Jack" then
+	TargetPart=getJackPart(CurrentTarget)
+else
+	TargetPart=getPart(CurrentTarget)
+end
+
+if not TargetPart then
+	CurrentTarget=nil
+	CurrentTargetType=nil
+	return
+end
+
+if CurrentTargetType=="Jack" then
+	local JackHumanoid=getJackHumanoid(CurrentTarget)
+	if not JackHumanoid or JackHumanoid.Health<=0 or not validJack(CurrentTarget) then
+		CurrentTarget=nil
+		CurrentTargetType=nil
+		LastExpectedPosition=Root.Position
+		return
+	end
+elseif CurrentTargetType=="Snowman" then
+	if not validPumpkinSnowman(CurrentTarget) then
+		CurrentTarget=nil
+		CurrentTargetType=nil
+		LastExpectedPosition=Root.Position
+		return
+	end
+elseif CurrentTargetType=="Pumpkin" and not validPumpkin(CurrentTarget) then
+	CurrentTarget=nil
+	CurrentTargetType=nil
+	LastExpectedPosition=Root.Position
+	return
+end
 
  local FLY_HEIGHT=5
  local PumpkinPosition=TargetPart.Position
  local TargetPosition=PumpkinPosition+Vector3.new(0,FLY_HEIGHT,0)
  local Distance=(PumpkinPosition-Root.Position).Magnitude
 
- if not validPumpkin(CurrentTarget) then
-  CurrentTarget=nil
-  LastExpectedPosition=Root.Position
-  return
- end
+ if CurrentTargetType=="Pumpkin" and not validPumpkin(CurrentTarget) then
+	CurrentTarget=nil
+	CurrentTargetType=nil
+	LastExpectedPosition=Root.Position
+	return
+end
 
- if Distance<=WEAPON_DISTANCE then
-  equipSelectedWeapon()
+ task.spawn(function()
+	while task.wait(ATTACK_INTERVAL) do
+		if Flying then
+			local Character=LocalPlayer.Character
+			local Root=getRoot()
 
-  local Tool=Character:FindFirstChildOfClass("Tool")
-  if Tool and (Tool.ToolTip=="Melee" or Tool.ToolTip=="Sword") then
-   pcall(function()
-    if RemoteAttack then
-     RemoteAttack:FireServer(0.00000000001,1)
-    end
-    if RemoteHit then
-     RemoteHit:FireServer(CurrentTarget)
-    end
-   end)
-  end
- end
+			if Character and Root and CurrentTarget and CurrentTarget.Parent then
+				local TargetPart
 
- if Distance<=3 then
-  Status.Text="Đã tới: "..CurrentTarget.Name
-  LastExpectedPosition=Root.Position
-  return
- end
+				if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+					TargetPart=getJackPart(CurrentTarget)
+				else
+					TargetPart=getPart(CurrentTarget)
+				end
+
+				if TargetPart and (TargetPart.Position-Root.Position).Magnitude<=WEAPON_DISTANCE then
+					equipSelectedWeapon()
+
+					local Tool=Character:FindFirstChildOfClass("Tool")
+					if Tool and (Tool.ToolTip=="Melee" or Tool.ToolTip=="Sword") then
+						if CurrentTargetType=="Pumpkin" then
+							pcall(function()
+								if RemoteAttack then
+									RemoteAttack:FireServer(0.00000000001,1)
+								end
+								if RemoteHit then
+									RemoteHit:FireServer(CurrentTarget)
+								end
+							end)
+						elseif CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+							AttackEnemyTarget(CurrentTarget)
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+if Distance<=3 then
+	if CurrentTargetType=="Jack" then
+		Status.Text="Đang đánh: "..CurrentTarget.Name
+	else
+		Status.Text="Đã tới: "..CurrentTarget.Name
+	end
+
+	LastExpectedPosition=Root.Position
+	return
+end
 
  if LastExpectedPosition then
   local UnexpectedDistance=(Root.Position-LastExpectedPosition).Magnitude
@@ -813,12 +1009,12 @@ end)
 local ToggleGuiBtn=Instance.new("TextButton")
 ToggleGuiBtn.Name="ToggleGuiButton"
 ToggleGuiBtn.Size=UDim2.new(0,35,0,35)
-ToggleGuiBtn.Position=UDim2.new(0.3,-17.5,0.3,0)
+ToggleGuiBtn.Position=UDim2.new(0.1,-17.5,0.3,0)
 ToggleGuiBtn.BackgroundColor3=Color3.fromRGB(18,18,24)
 ToggleGuiBtn.Text="🎃"
 ToggleGuiBtn.TextColor3=Color3.fromRGB(255,170,60)
 ToggleGuiBtn.Font=Enum.Font.Cartoon
-ToggleGuiBtn.TextSize=19
+ToggleGuiBtn.TextSize=20
 ToggleGuiBtn.Active=true
 ToggleGuiBtn.Parent=Gui
 
