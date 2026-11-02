@@ -947,11 +947,13 @@ RunService.Heartbeat:Connect(function(DT)
 		end
 	end
 
-	--// BAY THEO TARGET
-	local FLY_HEIGHT=5
-	local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
-	local Distance=(TargetPart.Position-Root.Position).Magnitude
-
+--// BAY THEO TARGET
+local FLY_HEIGHT=5
+if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+	FLY_HEIGHT=45
+end
+local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
+local Distance=(TargetPart.Position-Root.Position).Magnitude
 	if Distance<=3 then
 		if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
 			Status.Text="Đang đánh: "..CurrentTarget.Name
