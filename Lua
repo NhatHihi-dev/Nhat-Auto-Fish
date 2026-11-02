@@ -345,6 +345,32 @@ local function validPumpkinSnowman(Object)
 	return Part and Part.Parent and Humanoid and Humanoid.Health>0
 end
 
+local function getNearestPumpkin()
+	local Root=getRoot()
+	if not Root then return nil end
+
+	local FolderNow=getFolder()
+	if not FolderNow then return nil end
+
+	local Nearest=nil
+	local NearestDistance=100000
+
+	for _,v in ipairs(FolderNow:GetDescendants()) do
+		if validPumpkin(v) then
+			local Part=getPart(v)
+			if Part then
+				local Distance=(Part.Position-Root.Position).Magnitude
+				if Distance<NearestDistance then
+					NearestDistance=Distance
+					Nearest=v
+				end
+			end
+		end
+	end
+
+	return Nearest
+end
+
 local function getNearestJack()
 	local Root=getRoot()
 	if not Root then return nil end
@@ -795,104 +821,180 @@ task.spawn(function()
 end)
 
 RunService.Stepped:Connect(function()
- if Flying then
-  setNoclip(true)
-  local Root=getRoot()
-  if Root then
-   Root.AssemblyLinearVelocity=Vector3.zero
-  end
- end
+	if Flying then
+		setNoclip(true)
+		local Root=getRoot()
+		if Root then
+			Root.AssemblyLinearVelocity=Vector3.zero
+		end
+	end
 end)
 
 RunService.Heartbeat:Connect(function(DT)
- if not Flying then 
-  DisableAntiGravity()
-  return 
- end
+	if not Flying then
+		DisableAntiGravity()
+		return
+	end
 
- local Character=LocalPlayer.Character
- local Root=getRoot()
- local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
- if not Root or not Humanoid then 
-  DisableAntiGravity()
-  return 
- end
+	local Character=LocalPlayer.Character
+	local Root=getRoot()
+	local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
+	if not Root or not Humanoid then
+		DisableAntiGravity()
+		return
+	end
 
- EnableAntiGravity(Root)
+	EnableAntiGravity(Root)
 
- if os.clock()<PauseUntil then
-  Status.Text="Dừng 1s..."
-  return
- end
+	if os.clock()<PauseUntil then
+		Status.Text="Dừng 1s..."
+		return
+	end
 
-local JackTarget=getNearestJack()
+	--// TÌM TARGET
+	local JackTarget=getNearestJack()
+	local SnowmanTarget=getNearestPumpkinSnowman()
+	local PumpkinTarget=getNearestPumpkin()
 
-if JackTarget then
-	CurrentTarget=JackTarget
-	CurrentTargetType="Jack"
-	LastExpectedPosition=Root.Position
-	Status.Text="Jack: "..CurrentTarget.Name
-elseif not CurrentTarget or CurrentTargetType=="Jack" or not validPumpkin(CurrentTarget) then
-	CurrentTarget=getNearestPumpkin()
-	CurrentTargetType="Pumpkin"
-	LastExpectedPosition=Root.Position
+	local BestTarget=nil
+	local BestType=nil
+	local BestDistance=math.huge
 
-	if CurrentTarget then
-		Status.Text="Target: "..CurrentTarget.Name
+	if JackTarget then
+		local Part=getJackPart(JackTarget)
+		if Part then
+			local Distance=(Part.Position-Root.Position).Magnitude
+			if Distance<BestDistance then
+				BestTarget=JackTarget
+				BestType="Jack"
+				BestDistance=Distance
+			end
+		end
+	end
+
+	if SnowmanTarget then
+		local Part=getJackPart(SnowmanTarget)
+		if Part then
+			local Distance=(Part.Position-Root.Position).Magnitude
+			if Distance<BestDistance then
+				BestTarget=SnowmanTarget
+				BestType="Snowman"
+				BestDistance=Distance
+			end
+		end
+	end
+
+	if PumpkinTarget then
+		local Part=getPart(PumpkinTarget)
+		if Part then
+			local Distance=(Part.Position-Root.Position).Magnitude
+			if Distance<BestDistance then
+				BestTarget=PumpkinTarget
+				BestType="Pumpkin"
+				BestDistance=Distance
+			end
+		end
+	end
+
+	if not BestTarget then
+		CurrentTarget=nil
+		CurrentTargetType=nil
+		Status.Text="Đang tìm Pumpkin..."
+		LastExpectedPosition=Root.Position
+		return
+	end
+
+	CurrentTarget=BestTarget
+	CurrentTargetType=BestType
+
+	--// LẤY PART TARGET
+	local TargetPart
+
+	if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+		TargetPart=getJackPart(CurrentTarget)
 	else
-		Status.Text="Không có Pumpkin"
-		return
+		TargetPart=getPart(CurrentTarget)
 	end
-end
 
- local TargetPart
-if CurrentTargetType=="Jack" then
-	TargetPart=getJackPart(CurrentTarget)
-else
-	TargetPart=getPart(CurrentTarget)
-end
-
-if not TargetPart then
-	CurrentTarget=nil
-	CurrentTargetType=nil
-	return
-end
-
-if CurrentTargetType=="Jack" then
-	local JackHumanoid=getJackHumanoid(CurrentTarget)
-	if not JackHumanoid or JackHumanoid.Health<=0 or not validJack(CurrentTarget) then
+	if not TargetPart then
 		CurrentTarget=nil
 		CurrentTargetType=nil
 		LastExpectedPosition=Root.Position
 		return
 	end
-elseif CurrentTargetType=="Snowman" then
-	if not validPumpkinSnowman(CurrentTarget) then
-		CurrentTarget=nil
-		CurrentTargetType=nil
+
+	--// KIỂM TRA TARGET
+	if CurrentTargetType=="Jack" then
+		if not validJack(CurrentTarget) then
+			CurrentTarget=nil
+			CurrentTargetType=nil
+			LastExpectedPosition=Root.Position
+			return
+		end
+	elseif CurrentTargetType=="Snowman" then
+		if not validPumpkinSnowman(CurrentTarget) then
+			CurrentTarget=nil
+			CurrentTargetType=nil
+			LastExpectedPosition=Root.Position
+			return
+		end
+	elseif CurrentTargetType=="Pumpkin" then
+		if not validPumpkin(CurrentTarget) then
+			CurrentTarget=nil
+			CurrentTargetType=nil
+			LastExpectedPosition=Root.Position
+			return
+		end
+	end
+
+	--// BAY THEO TARGET
+	local FLY_HEIGHT=5
+	local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
+	local Distance=(TargetPart.Position-Root.Position).Magnitude
+
+	if Distance<=3 then
+		if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+			Status.Text="Đang đánh: "..CurrentTarget.Name
+		else
+			Status.Text="Đã tới: "..CurrentTarget.Name
+		end
+
 		LastExpectedPosition=Root.Position
 		return
 	end
-elseif CurrentTargetType=="Pumpkin" and not validPumpkin(CurrentTarget) then
-	CurrentTarget=nil
-	CurrentTargetType=nil
-	LastExpectedPosition=Root.Position
-	return
-end
 
- local FLY_HEIGHT=5
- local PumpkinPosition=TargetPart.Position
- local TargetPosition=PumpkinPosition+Vector3.new(0,FLY_HEIGHT,0)
- local Distance=(PumpkinPosition-Root.Position).Magnitude
+	--// KIỂM TRA DESYNC
+	if LastExpectedPosition then
+		local UnexpectedDistance=(Root.Position-LastExpectedPosition).Magnitude
 
- if CurrentTargetType=="Pumpkin" and not validPumpkin(CurrentTarget) then
-	CurrentTarget=nil
-	CurrentTargetType=nil
-	LastExpectedPosition=Root.Position
-	return
-end
+		if UnexpectedDistance>MAX_DESYNC then
+			PauseUntil=os.clock()+PAUSE_TIME
+			LastExpectedPosition=Root.Position
+			Status.Text="Phát hiện lệch >30 studs"
+			return
+		end
+	end
 
- task.spawn(function()
+	local CurrentSpeed=Distance<=100 and 3000 or SPEED
+local Alpha=math.clamp((CurrentSpeed*DT)/Distance,0,1)
+	local NewPosition=Root.Position:Lerp(TargetPosition,Alpha)
+
+	Root.CFrame=CFrame.new(NewPosition)
+	LastExpectedPosition=NewPosition
+
+	local TargetName=CurrentTarget.Name
+
+	if CurrentTargetType=="Jack" then
+		Status.Text="Jack: "..TargetName.." | "..math.floor(Distance/10+0.5).."m"
+	elseif CurrentTargetType=="Snowman" then
+		Status.Text="Snowman: "..TargetName.." | "..math.floor(Distance/10+0.5).."m"
+	else
+		Status.Text="Pumpkin: "..TargetName.." | "..math.floor(Distance/10+0.5).."m"
+	end
+end)
+
+--// ATTACK LOOP RIÊNG
+task.spawn(function()
 	while task.wait(ATTACK_INTERVAL) do
 		if Flying then
 			local Character=LocalPlayer.Character
@@ -911,6 +1013,7 @@ end
 					equipSelectedWeapon()
 
 					local Tool=Character:FindFirstChildOfClass("Tool")
+
 					if Tool and (Tool.ToolTip=="Melee" or Tool.ToolTip=="Sword") then
 						if CurrentTargetType=="Pumpkin" then
 							pcall(function()
@@ -931,51 +1034,23 @@ end
 	end
 end)
 
-if Distance<=3 then
-	if CurrentTargetType=="Jack" then
-		Status.Text="Đang đánh: "..CurrentTarget.Name
-	else
-		Status.Text="Đã tới: "..CurrentTarget.Name
-	end
-
-	LastExpectedPosition=Root.Position
-	return
-end
-
- if LastExpectedPosition then
-  local UnexpectedDistance=(Root.Position-LastExpectedPosition).Magnitude
-  if UnexpectedDistance>MAX_DESYNC then
-   PauseUntil=os.clock()+PAUSE_TIME
-   LastExpectedPosition=Root.Position
-   Status.Text="Phát hiện lệch >30 studs"
-   return
-  end
- end
-
- local Alpha=math.clamp((SPEED*DT)/Distance,0,1)
- local NewPosition=Root.Position:Lerp(TargetPosition,Alpha)
-
- Root.CFrame=CFrame.new(NewPosition)
- LastExpectedPosition=NewPosition
-
- Status.Text=CurrentTarget.Name.." | "..math.floor(Distance/10+0.5).."m"
-end)
-
 local FolderConnection
 
 local function connectFolder()
- if FolderConnection then
-  FolderConnection:Disconnect()
-  FolderConnection=nil
- end
- local FolderNow=getFolder()
- if not FolderNow then return end
+	if FolderConnection then
+		FolderConnection:Disconnect()
+		FolderConnection=nil
+	end
 
- FolderConnection=FolderNow.DescendantRemoving:Connect(function(Object)
-  if Object==CurrentTarget then
-   CurrentTarget=nil
-  end
- end)
+	local FolderNow=getFolder()
+	if not FolderNow then return end
+
+	FolderConnection=FolderNow.DescendantRemoving:Connect(function(Object)
+		if Object==CurrentTarget then
+			CurrentTarget=nil
+			CurrentTargetType=nil
+		end
+	end)
 end
 
 connectFolder()
