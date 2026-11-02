@@ -1,0 +1,862 @@
+local Players=game:GetService("Players")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local UIS=game:GetService("UserInputService")
+local CoreGui=game:GetService("CoreGui")
+local LocalPlayer=Players.LocalPlayer
+local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
+
+pcall(function()
+	local OldGui=CoreGui:FindFirstChild("PumpkinHuntGui")
+	if OldGui then OldGui:Destroy() end
+end)
+
+pcall(function()
+	local OldGui=PlayerGui:FindFirstChild("PumpkinHuntGui")
+	if OldGui then OldGui:Destroy() end
+end)
+
+local Folder=workspace:FindFirstChild("PumpkinHunt")
+
+local NetFolder
+pcall(function()
+	local Modules=ReplicatedStorage:WaitForChild("Modules",5)
+	if Modules then
+		NetFolder=Modules:WaitForChild("Net",5)
+	end
+end)
+
+local RemoteHit=NetFolder and NetFolder:FindFirstChild("RE/RegisterHit")
+local RemoteAttack=NetFolder and NetFolder:FindFirstChild("RE/RegisterAttack")
+
+--// SETTINGS
+local SPEED=220
+local MAX_DESYNC=30
+local PAUSE_TIME=1
+local WEAPON_DISTANCE=15
+local PUMPKIN_GROUP_DISTANCE=3
+local ESP_DISTANCE=10000
+
+local Flying=false
+local ESPEnabled=false
+local CurrentTarget=nil
+local PauseUntil=0
+local LastExpectedPosition=nil
+local LastWeaponEquip=0
+local ChooseWP="Melee"
+
+_G.ChooseWP="Melee"
+_G.SelectWeapon=nil
+
+--// TABLES
+local OldCollision={}
+local PlayerHighlight=nil
+local PumpkinESPList={}
+local BodyVelocity=nil
+
+--// GUI
+local Gui=Instance.new("ScreenGui")
+Gui.Name="PumpkinHuntGui"
+Gui.ResetOnSpawn=false
+Gui.Parent=CoreGui
+
+local Main=Instance.new("Frame")
+Main.Size=UDim2.new(0,230,0,220)
+Main.Position=UDim2.new(0.5,-115,0.5,-110)
+Main.BackgroundColor3=Color3.fromRGB(18,18,24)
+Main.BorderSizePixel=0
+Main.Active=true
+Main.Parent=Gui
+
+local Corner=Instance.new("UICorner")
+Corner.CornerRadius=UDim.new(0,10)
+Corner.Parent=Main
+
+local Stroke=Instance.new("UIStroke")
+Stroke.Color=Color3.fromRGB(255,140,0)
+Stroke.Thickness=1.5
+Stroke.Parent=Main
+
+local Title=Instance.new("TextLabel")
+Title.Size=UDim2.new(1,0,0,35)
+Title.BackgroundTransparency=1
+Title.Text="🎃 PUMPKIN HUNT"
+Title.TextColor3=Color3.fromRGB(255,170,60)
+Title.Font=Enum.Font.Cartoon
+Title.TextSize=20
+Title.Parent=Main
+
+local FlyBtn=Instance.new("TextButton")
+FlyBtn.Size=UDim2.new(0,190,0,35)
+FlyBtn.Position=UDim2.new(0.5,-95,0,45)
+FlyBtn.BackgroundColor3=Color3.fromRGB(35,35,45)
+FlyBtn.Text="PUMPKIN HUNT"
+FlyBtn.TextColor3=Color3.fromRGB(255,255,255)
+FlyBtn.Font=Enum.Font.Cartoon
+FlyBtn.TextSize=16
+FlyBtn.Parent=Main
+
+local FlyCorner=Instance.new("UICorner")
+FlyCorner.CornerRadius=UDim.new(0,8)
+FlyCorner.Parent=FlyBtn
+
+local FlyStroke=Instance.new("UIStroke")
+FlyStroke.Color=Color3.fromRGB(255,140,0)
+FlyStroke.Thickness=1.5
+FlyStroke.Enabled=false
+FlyStroke.Parent=FlyBtn
+
+local EspBtn=Instance.new("TextButton")
+EspBtn.Size=UDim2.new(0,190,0,35)
+EspBtn.Position=UDim2.new(0.5,-95,0,85)
+EspBtn.BackgroundColor3=Color3.fromRGB(35,35,45)
+EspBtn.Text="ESP"
+EspBtn.TextColor3=Color3.fromRGB(255,255,255)
+EspBtn.Font=Enum.Font.Cartoon
+EspBtn.TextSize=16
+EspBtn.Parent=Main
+
+local EspCorner=Instance.new("UICorner")
+EspCorner.CornerRadius=UDim.new(0,8)
+EspCorner.Parent=EspBtn
+
+local EspStroke=Instance.new("UIStroke")
+EspStroke.Color=Color3.fromRGB(255,140,0)
+EspStroke.Thickness=1.5
+EspStroke.Enabled=false
+EspStroke.Parent=EspBtn
+
+local WeaponFrame=Instance.new("Frame")
+WeaponFrame.Size=UDim2.new(0,190,0,35)
+WeaponFrame.Position=UDim2.new(0.5,-95,0,125)
+WeaponFrame.BackgroundColor3=Color3.fromRGB(35,35,45)
+WeaponFrame.BorderSizePixel=0
+WeaponFrame.Parent=Main
+
+local WeaponCorner=Instance.new("UICorner")
+WeaponCorner.CornerRadius=UDim.new(0,8)
+WeaponCorner.Parent=WeaponFrame
+
+local WeaponText=Instance.new("TextLabel")
+WeaponText.Size=UDim2.new(1,-38,1,0)
+WeaponText.Position=UDim2.new(0,10,0,0)
+WeaponText.BackgroundTransparency=1
+WeaponText.Text="Weapon: Melee"
+WeaponText.TextColor3=Color3.fromRGB(255,255,255)
+WeaponText.Font=Enum.Font.Cartoon
+WeaponText.TextSize=15
+WeaponText.TextXAlignment=Enum.TextXAlignment.Left
+WeaponText.Parent=WeaponFrame
+
+local ArrowBtn=Instance.new("TextButton")
+ArrowBtn.Size=UDim2.new(0,35,1,0)
+ArrowBtn.Position=UDim2.new(1,-35,0,0)
+ArrowBtn.BackgroundTransparency=1
+ArrowBtn.Text="▼"
+ArrowBtn.TextColor3=Color3.fromRGB(255,255,255)
+ArrowBtn.Font=Enum.Font.Cartoon
+ArrowBtn.TextSize=17
+ArrowBtn.Parent=WeaponFrame
+
+local Status=Instance.new("TextLabel")
+Status.Size=UDim2.new(1,-20,0,35)
+Status.Position=UDim2.new(0,10,0,170)
+Status.BackgroundTransparency=1
+Status.Text="Pumpkin: None"
+Status.TextColor3=Color3.fromRGB(180,180,190)
+Status.Font=Enum.Font.Cartoon
+Status.TextSize=14
+Status.Parent=Main
+
+--// WEAPON DROPDOWN
+local WeaponList=Instance.new("Frame")
+WeaponList.Size=UDim2.new(0,190,0,145)
+WeaponList.Position=UDim2.new(0.5,-308,0,45)
+WeaponList.BackgroundColor3=Color3.fromRGB(15,20,28)
+WeaponList.BorderSizePixel=0
+WeaponList.Visible=false
+WeaponList.ZIndex=20
+WeaponList.Parent=Gui
+
+local WeaponListCorner=Instance.new("UICorner")
+WeaponListCorner.CornerRadius=UDim.new(0,8)
+WeaponListCorner.Parent=WeaponList
+
+local WeaponListStroke=Instance.new("UIStroke")
+WeaponListStroke.Color=Color3.fromRGB(255,140,0)
+WeaponListStroke.Thickness=1.5
+WeaponListStroke.Parent=WeaponList
+
+local Scroll=Instance.new("ScrollingFrame")
+Scroll.Size=UDim2.new(1,-8,1,-8)
+Scroll.Position=UDim2.new(0,4,0,4)
+Scroll.BackgroundTransparency=1
+Scroll.BorderSizePixel=0
+Scroll.ScrollBarThickness=3
+Scroll.CanvasSize=UDim2.new(0,0,0,0)
+Scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
+Scroll.ZIndex=21
+Scroll.Parent=WeaponList
+
+local ListLayout=Instance.new("UIListLayout")
+ListLayout.Padding=UDim.new(0,5)
+ListLayout.SortOrder=Enum.SortOrder.LayoutOrder
+ListLayout.Parent=Scroll
+
+local ListPadding=Instance.new("UIPadding")
+ListPadding.PaddingTop=UDim.new(0,4)
+ListPadding.PaddingBottom=UDim.new(0,4)
+ListPadding.Parent=Scroll
+
+local WeaponNames={"Melee","Sword","Blox Fruit","Gun"}
+
+for i,Name in ipairs(WeaponNames) do
+ local Button=Instance.new("TextButton")
+ Button.Size=UDim2.new(1,-8,0,30)
+ Button.BackgroundColor3=Color3.fromRGB(35,35,45)
+ Button.Text=Name
+ Button.TextColor3=Color3.fromRGB(255,255,255)
+ Button.Font=Enum.Font.Cartoon
+ Button.TextSize=14
+ Button.LayoutOrder=i
+ Button.ZIndex=22
+ Button.Parent=Scroll
+
+ local ButtonCorner=Instance.new("UICorner")
+ ButtonCorner.CornerRadius=UDim.new(0,6)
+ ButtonCorner.Parent=Button
+
+ Button.MouseButton1Click:Connect(function()
+  ChooseWP=Name
+  _G.ChooseWP=Name
+  WeaponText.Text="Weapon: "..Name
+  WeaponList.Visible=false
+  ArrowBtn.Text="▼"
+ end)
+end
+
+ArrowBtn.MouseButton1Click:Connect(function()
+ WeaponList.Visible=not WeaponList.Visible
+ ArrowBtn.Text=WeaponList.Visible and "▲" or "▼"
+end)
+
+--// DRAG GUI
+local Dragging=false
+local DragStart
+local StartPos
+
+Title.InputBegan:Connect(function(Input)
+ if Input.UserInputType==Enum.UserInputType.MouseButton1 or Input.UserInputType==Enum.UserInputType.Touch then
+  Dragging=true
+  DragStart=Input.Position
+  StartPos=Main.Position
+ end
+end)
+
+Title.InputEnded:Connect(function(Input)
+ if Input.UserInputType==Enum.UserInputType.MouseButton1 or Input.UserInputType==Enum.UserInputType.Touch then
+  Dragging=false
+ end
+end)
+
+UIS.InputChanged:Connect(function(Input)
+ if Dragging and (Input.UserInputType==Enum.UserInputType.MouseMovement or Input.UserInputType==Enum.UserInputType.Touch) then
+  local Delta=Input.Position-DragStart
+  Main.Position=UDim2.new(StartPos.X.Scale,StartPos.X.Offset+Delta.X,StartPos.Y.Scale,StartPos.Y.Offset+Delta.Y)
+ end
+end)
+
+--// GET FOLDER
+local function getFolder()
+ Folder=workspace:FindFirstChild("PumpkinHunt")
+ return Folder
+end
+
+local function isPumpkin(Object)
+ if not Object then return false end
+ return string.find(string.lower(Object.Name),"pumpkin",1,true)~=nil
+end
+
+local function getPart(Object)
+ if not Object then return nil end
+ if Object:IsA("BasePart") then return Object end
+ if Object:IsA("Model") then
+  if Object.PrimaryPart then return Object.PrimaryPart end
+  return Object:FindFirstChildWhichIsA("BasePart",true)
+ end
+ return Object:FindFirstChildWhichIsA("BasePart",true)
+end
+
+local function getRoot()
+ local Character=LocalPlayer.Character
+ return Character and Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function validPumpkin(Object)
+ if not Object or not Object.Parent or not isPumpkin(Object) then return false end
+ local Part=getPart(Object)
+ return Part and Part.Parent
+end
+
+local function getAllPumpkins()
+ local FolderNow=getFolder()
+ if not FolderNow then return {} end
+
+ local Pumpkins={}
+
+ for _,v in ipairs(FolderNow:GetDescendants()) do
+  if validPumpkin(v) then
+   table.insert(Pumpkins,v)
+  end
+ end
+
+ return Pumpkins
+end
+
+local function getNearestPumpkin()
+ local Root=getRoot()
+ if not Root then return nil end
+
+ local Nearest=nil
+ local NearestDistance=math.huge
+
+ for _,v in ipairs(getAllPumpkins()) do
+  local Part=getPart(v)
+  if Part then
+   local Distance=(Root.Position-Part.Position).Magnitude
+   if Distance<NearestDistance then
+    NearestDistance=Distance
+    Nearest=v
+   end
+  end
+ end
+
+ return Nearest
+end
+
+local function getPumpkinGroups()
+	local AllPumpkins=getAllPumpkins()
+	local Groups={}
+	local Root=getRoot()
+	if not Root then return Groups end
+
+	for _,Pumpkin in ipairs(AllPumpkins) do
+		local Part=getPart(Pumpkin)
+		if Part and (Part.Position-Root.Position).Magnitude<=ESP_DISTANCE then
+			table.insert(Groups,{Pumpkin})
+		end
+	end
+
+	return Groups
+end
+
+local function removePumpkinESP()
+ for _,Data in ipairs(PumpkinESPList) do
+  if Data.Highlight then Data.Highlight:Destroy() end
+  if Data.Billboard then Data.Billboard:Destroy() end
+ end
+ table.clear(PumpkinESPList)
+end
+
+local function createPumpkinGroupESP(Group)
+	if not Group or #Group==0 then return end
+
+	local Root=getRoot()
+	if not Root then return end
+
+	local MainPumpkin=Group[1]
+	local Part=getPart(MainPumpkin)
+	if not Part then return end
+
+	local Highlight=Instance.new("Highlight")
+	Highlight.Name="PumpkinESP"
+	Highlight.Adornee=MainPumpkin:IsA("Model") and MainPumpkin or Part
+	Highlight.FillColor=Color3.fromRGB(255,140,0)
+	Highlight.OutlineColor=Color3.fromRGB(255,255,255)
+	Highlight.FillTransparency=0.55
+	Highlight.OutlineTransparency=0
+	Highlight.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+	Highlight.Parent=Gui
+
+	local Billboard=Instance.new("BillboardGui")
+	Billboard.Name="PumpkinESP"
+	Billboard.Adornee=Part
+	Billboard.Size=UDim2.new(0,190,0,55)
+	Billboard.StudsOffset=Vector3.new(0,3,0)
+	Billboard.AlwaysOnTop=true
+	Billboard.Parent=Gui
+
+	local NameLabel=Instance.new("TextLabel")
+	NameLabel.Name="NameLabel"
+	NameLabel.Size=UDim2.new(1,0,0,27)
+	NameLabel.BackgroundTransparency=1
+	NameLabel.Text=MainPumpkin.Name
+	NameLabel.TextColor3=Color3.fromRGB(255,180,60)
+	NameLabel.TextStrokeTransparency=0
+	NameLabel.Font=Enum.Font.Cartoon
+	NameLabel.TextSize=14
+	NameLabel.Parent=Billboard
+
+	local DistanceLabel=Instance.new("TextLabel")
+	DistanceLabel.Name="DistanceLabel"
+	DistanceLabel.Size=UDim2.new(1,0,0,23)
+	DistanceLabel.Position=UDim2.new(0,0,0,27)
+	DistanceLabel.BackgroundTransparency=1
+
+	local Distance=(Root.Position-Part.Position).Magnitude
+	DistanceLabel.Text=math.floor(Distance/10+0.5).."m"
+	DistanceLabel.TextColor3=Color3.fromRGB(255,255,255)
+	DistanceLabel.TextStrokeTransparency=0
+	DistanceLabel.Font=Enum.Font.Cartoon
+	DistanceLabel.TextSize=14
+	DistanceLabel.Parent=Billboard
+
+	table.insert(PumpkinESPList,{
+		Group=Group,
+		Main=MainPumpkin,
+		Part=Part,
+		Highlight=Highlight,
+		Billboard=Billboard
+	})
+end
+
+local function updatePumpkinESP()
+	if not ESPEnabled then
+		removePumpkinESP()
+		return
+	end
+
+	local Groups=getPumpkinGroups()
+	local Existing={}
+
+	for _,Data in ipairs(PumpkinESPList) do
+		if Data.Main and validPumpkin(Data.Main) then
+			Existing[Data.Main]=Data
+		end
+	end
+
+	local NewMain={}
+
+	for _,Group in ipairs(Groups) do
+		local MainPumpkin=Group[1]
+		NewMain[MainPumpkin]=true
+
+		if not Existing[MainPumpkin] then
+			createPumpkinGroupESP(Group)
+		end
+	end
+
+	for i=#PumpkinESPList,1,-1 do
+		local Data=PumpkinESPList[i]
+
+		if not Data.Main or not validPumpkin(Data.Main) or not NewMain[Data.Main] then
+			if Data.Highlight then Data.Highlight:Destroy() end
+			if Data.Billboard then Data.Billboard:Destroy() end
+			table.remove(PumpkinESPList,i)
+		end
+	end
+end
+
+local function updateESPDistance()
+	if not ESPEnabled then return end
+
+	local Root=getRoot()
+	if not Root then return end
+
+	for i=#PumpkinESPList,1,-1 do
+		local Data=PumpkinESPList[i]
+
+		if not Data.Main or not validPumpkin(Data.Main) or not Data.Part or not Data.Part.Parent then
+			if Data.Highlight then Data.Highlight:Destroy() end
+			if Data.Billboard then Data.Billboard:Destroy() end
+			table.remove(PumpkinESPList,i)
+		else
+			local Distance=(Root.Position-Data.Part.Position).Magnitude
+			local DistanceLabel=Data.Billboard:FindFirstChild("DistanceLabel")
+
+			if DistanceLabel then
+				DistanceLabel.Text=math.floor(Distance/10+0.5).."m"
+			end
+		end
+	end
+end
+
+local function setPlayerHighlight(State)
+ if State then
+  if PlayerHighlight then return end
+  local Character=LocalPlayer.Character
+  if not Character then return end
+
+  PlayerHighlight=Instance.new("Highlight")
+  PlayerHighlight.Name="PumpkinFlyHighlight"
+  PlayerHighlight.Adornee=Character
+  PlayerHighlight.FillColor=Color3.fromRGB(80,180,255)
+  PlayerHighlight.OutlineColor=Color3.fromRGB(255,255,255)
+  PlayerHighlight.FillTransparency=0.60
+  PlayerHighlight.OutlineTransparency=0
+  PlayerHighlight.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+  PlayerHighlight.Parent=Gui
+ else
+  if PlayerHighlight then
+   PlayerHighlight:Destroy()
+   PlayerHighlight=nil
+  end
+ end
+end
+
+local function setNoclip(State)
+ local Character=LocalPlayer.Character
+ if not Character then return end
+
+ if State then
+  for _,v in ipairs(Character:GetDescendants()) do
+   if v:IsA("BasePart") then
+    if OldCollision[v]==nil then
+     OldCollision[v]=v.CanCollide
+    end
+    v.CanCollide=false
+   end
+  end
+ else
+  for v,CanCollide in pairs(OldCollision) do
+   if v and v.Parent then
+    v.CanCollide=CanCollide
+   end
+  end
+  table.clear(OldCollision)
+ end
+end
+
+-- BỎ KHÓA NHÂN VẬT: Dùng BodyVelocity lơ lửng mà không kích hoạt PlatformStand
+local function EnableAntiGravity(root)
+ if not BodyVelocity or BodyVelocity.Parent ~= root then
+  if BodyVelocity then BodyVelocity:Destroy() end
+  
+  BodyVelocity = Instance.new("BodyVelocity")
+  BodyVelocity.Name = "PumpkinHover"
+  BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+  BodyVelocity.MaxForce = Vector3.new(0, math.huge, 0) -- Khóa trọng lực Y
+  BodyVelocity.P = 9000
+  BodyVelocity.Parent = root
+ end
+ 
+ local Character = LocalPlayer.Character
+ local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+ if Humanoid then
+  Humanoid.PlatformStand = false -- Đảm bảo không khóa nhân vật
+ end
+end
+
+local function DisableAntiGravity()
+ if BodyVelocity then
+  BodyVelocity:Destroy()
+  BodyVelocity = nil
+ end
+ local Character = LocalPlayer.Character
+ local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+ if Humanoid then
+  Humanoid.PlatformStand = false
+ end
+end
+
+local function getSelectedWeapon()
+ local Backpack=LocalPlayer:FindFirstChildOfClass("Backpack")
+ if not Backpack then return nil end
+
+ for _,v in ipairs(Backpack:GetChildren()) do
+  if v:IsA("Tool") and v.ToolTip==ChooseWP then
+   return v
+  end
+ end
+ return nil
+end
+
+local function equipSelectedWeapon()
+ if os.clock()-LastWeaponEquip<0.25 then return end
+ LastWeaponEquip=os.clock()
+
+ local Character=LocalPlayer.Character
+ local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
+ local Backpack=LocalPlayer:FindFirstChildOfClass("Backpack")
+ if not Humanoid or not Backpack then return end
+
+ for _,v in ipairs(Character:GetChildren()) do
+  if v:IsA("Tool") and v.ToolTip==ChooseWP then
+   _G.SelectWeapon=v.Name
+   return
+  end
+ end
+
+ local Tool=getSelectedWeapon()
+ if Tool then
+  _G.SelectWeapon=Tool.Name
+  Humanoid:EquipTool(Tool)
+ end
+end
+
+local function stopFly()
+ Flying=false
+ CurrentTarget=nil
+ PauseUntil=0
+ LastExpectedPosition=nil
+
+ setNoclip(false)
+ setPlayerHighlight(false)
+ DisableAntiGravity()
+ Status.Text="Pumpkin: None"
+end
+
+local function startFly()
+ if Flying then
+  stopFly()
+  return
+ end
+
+ Flying=true
+ CurrentTarget=nil
+ LastExpectedPosition=nil
+
+ setPlayerHighlight(true)
+ setNoclip(true)
+
+ Status.Text="Đang tìm Pumpkin..."
+end
+
+FlyBtn.MouseButton1Click:Connect(function()
+ startFly()
+
+ if Flying then
+  FlyStroke.Enabled=true
+  FlyBtn.BackgroundColor3=Color3.fromRGB(45,38,28)
+ else
+  FlyStroke.Enabled=false
+  FlyBtn.BackgroundColor3=Color3.fromRGB(35,35,45)
+ end
+end)
+
+EspBtn.MouseButton1Click:Connect(function()
+ ESPEnabled=not ESPEnabled
+
+ if ESPEnabled then
+  EspStroke.Enabled=true
+  EspBtn.BackgroundColor3=Color3.fromRGB(45,38,28)
+  updatePumpkinESP()
+ else
+  EspStroke.Enabled=false
+  EspBtn.BackgroundColor3=Color3.fromRGB(35,35,45)
+  removePumpkinESP()
+ end
+end)
+
+task.spawn(function()
+ while task.wait(0.5) do
+  pcall(function()
+   updatePumpkinESP()
+  end)
+ end
+end)
+
+task.spawn(function()
+ while task.wait(0.15) do
+  pcall(function()
+   updateESPDistance()
+  end)
+ end
+end)
+
+RunService.Stepped:Connect(function()
+ if Flying then
+  setNoclip(true)
+  local Root=getRoot()
+  if Root then
+   Root.AssemblyLinearVelocity=Vector3.zero
+  end
+ end
+end)
+
+RunService.Heartbeat:Connect(function(DT)
+ if not Flying then 
+  DisableAntiGravity()
+  return 
+ end
+
+ local Character=LocalPlayer.Character
+ local Root=getRoot()
+ local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
+ if not Root or not Humanoid then 
+  DisableAntiGravity()
+  return 
+ end
+
+ EnableAntiGravity(Root)
+
+ if os.clock()<PauseUntil then
+  Status.Text="Dừng 1s..."
+  return
+ end
+
+ if not CurrentTarget or not validPumpkin(CurrentTarget) then
+  CurrentTarget=getNearestPumpkin()
+  LastExpectedPosition=Root.Position
+
+  if CurrentTarget then
+   Status.Text="Target: "..CurrentTarget.Name
+  else
+   Status.Text="Không có Pumpkin"
+   return
+  end
+ end
+
+ local TargetPart=getPart(CurrentTarget)
+ if not TargetPart then
+  CurrentTarget=nil
+  return
+ end
+
+ local FLY_HEIGHT=5
+ local PumpkinPosition=TargetPart.Position
+ local TargetPosition=PumpkinPosition+Vector3.new(0,FLY_HEIGHT,0)
+ local Distance=(PumpkinPosition-Root.Position).Magnitude
+
+ if not validPumpkin(CurrentTarget) then
+  CurrentTarget=nil
+  LastExpectedPosition=Root.Position
+  return
+ end
+
+ if Distance<=WEAPON_DISTANCE then
+  equipSelectedWeapon()
+
+  local Tool=Character:FindFirstChildOfClass("Tool")
+  if Tool and (Tool.ToolTip=="Melee" or Tool.ToolTip=="Sword") then
+   pcall(function()
+    if RemoteAttack then
+     RemoteAttack:FireServer(0.00000000001,1)
+    end
+    if RemoteHit then
+     RemoteHit:FireServer(CurrentTarget)
+    end
+   end)
+  end
+ end
+
+ if Distance<=3 then
+  Status.Text="Đã tới: "..CurrentTarget.Name
+  LastExpectedPosition=Root.Position
+  return
+ end
+
+ if LastExpectedPosition then
+  local UnexpectedDistance=(Root.Position-LastExpectedPosition).Magnitude
+  if UnexpectedDistance>MAX_DESYNC then
+   PauseUntil=os.clock()+PAUSE_TIME
+   LastExpectedPosition=Root.Position
+   Status.Text="Phát hiện lệch >30 studs"
+   return
+  end
+ end
+
+ local Alpha=math.clamp((SPEED*DT)/Distance,0,1)
+ local NewPosition=Root.Position:Lerp(TargetPosition,Alpha)
+
+ Root.CFrame=CFrame.new(NewPosition)
+ LastExpectedPosition=NewPosition
+
+ Status.Text=CurrentTarget.Name.." | "..math.floor(Distance/10+0.5).."m"
+end)
+
+local FolderConnection
+
+local function connectFolder()
+ if FolderConnection then
+  FolderConnection:Disconnect()
+  FolderConnection=nil
+ end
+ local FolderNow=getFolder()
+ if not FolderNow then return end
+
+ FolderConnection=FolderNow.DescendantRemoving:Connect(function(Object)
+  if Object==CurrentTarget then
+   CurrentTarget=nil
+  end
+ end)
+end
+
+connectFolder()
+
+LocalPlayer.CharacterAdded:Connect(function()
+ task.wait(1)
+ CurrentTarget=nil
+ LastExpectedPosition=nil
+ table.clear(OldCollision)
+ removePumpkinESP()
+ DisableAntiGravity()
+
+ if Flying then
+  setPlayerHighlight(true)
+  setNoclip(true)
+ end
+end)
+
+task.spawn(function()
+ while task.wait(1) do
+  if workspace:FindFirstChild("PumpkinHunt")~=Folder then
+   Folder=workspace:FindFirstChild("PumpkinHunt")
+   connectFolder()
+   if ESPEnabled then
+    updatePumpkinESP()
+   end
+  end
+ end
+end)
+
+local ToggleGuiBtn=Instance.new("TextButton")
+ToggleGuiBtn.Name="ToggleGuiButton"
+ToggleGuiBtn.Size=UDim2.new(0,35,0,35)
+ToggleGuiBtn.Position=UDim2.new(0.3,-17.5,0.3,0)
+ToggleGuiBtn.BackgroundColor3=Color3.fromRGB(18,18,24)
+ToggleGuiBtn.Text="🎃"
+ToggleGuiBtn.TextColor3=Color3.fromRGB(255,170,60)
+ToggleGuiBtn.Font=Enum.Font.Cartoon
+ToggleGuiBtn.TextSize=19
+ToggleGuiBtn.Active=true
+ToggleGuiBtn.Parent=Gui
+
+local ToggleCorner=Instance.new("UICorner")
+ToggleCorner.CornerRadius=UDim.new(1,0)
+ToggleCorner.Parent=ToggleGuiBtn
+
+local ToggleStroke=Instance.new("UIStroke")
+ToggleStroke.Color=Color3.fromRGB(255,140,0)
+ToggleStroke.Thickness=1.5
+ToggleStroke.Parent=ToggleGuiBtn
+
+ToggleGuiBtn.MouseButton1Click:Connect(function()
+ Main.Visible=not Main.Visible
+ WeaponList.Visible=false
+end)
+
+local ToggleDragging=false
+local ToggleDragStart
+local ToggleStartPos
+
+ToggleGuiBtn.InputBegan:Connect(function(Input)
+ if Input.UserInputType==Enum.UserInputType.MouseButton1 or Input.UserInputType==Enum.UserInputType.Touch then
+  ToggleDragging=true
+  ToggleDragStart=Input.Position
+  ToggleStartPos=ToggleGuiBtn.Position
+ end
+end)
+
+ToggleGuiBtn.InputEnded:Connect(function(Input)
+ if Input.UserInputType==Enum.UserInputType.MouseButton1 or Input.UserInputType==Enum.UserInputType.Touch then
+  ToggleDragging=false
+ end
+end)
+
+UIS.InputChanged:Connect(function(Input)
+ if ToggleDragging and (Input.UserInputType==Enum.UserInputType.MouseMovement or Input.UserInputType==Enum.UserInputType.Touch) then
+  local Delta=Input.Position-ToggleDragStart
+  ToggleGuiBtn.Position=UDim2.new(ToggleStartPos.X.Scale,ToggleStartPos.X.Offset+Delta.X,ToggleStartPos.Y.Scale,ToggleStartPos.Y.Offset+Delta.Y)
+ end
+end)
