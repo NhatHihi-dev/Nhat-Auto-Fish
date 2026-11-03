@@ -33,11 +33,11 @@ local RemoteAttack=NetFolder and NetFolder:FindFirstChild("RE/RegisterAttack")
 local SPEED=220
 local MAX_DESYNC=30
 local PAUSE_TIME=1
-local WEAPON_DISTANCE=15
+local WEAPON_DISTANCE=100
 local PUMPKIN_GROUP_DISTANCE=3
 local ESP_DISTANCE=10000
-local JACK_DISTANCE=100
-local ATTACK_INTERVAL=0.01
+local JACK_DISTANCE=500
+local ATTACK_INTERVAL=0.1
 
 local Flying=false
 local ESPEnabled=false
