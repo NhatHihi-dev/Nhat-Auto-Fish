@@ -113,7 +113,7 @@ local EspBtn=Instance.new("TextButton")
 EspBtn.Size=UDim2.new(0,190,0,35)
 EspBtn.Position=UDim2.new(0.5,-95,0,85)
 EspBtn.BackgroundColor3=Color3.fromRGB(35,35,45)
-EspBtn.Text="ESP"
+EspBtn.Text="ESP PUMPKIN"
 EspBtn.TextColor3=Color3.fromRGB(255,255,255)
 EspBtn.Font=Enum.Font.Cartoon
 EspBtn.TextSize=16
@@ -158,7 +158,7 @@ ArrowBtn.BackgroundTransparency=1
 ArrowBtn.Text="▼"
 ArrowBtn.TextColor3=Color3.fromRGB(255,255,255)
 ArrowBtn.Font=Enum.Font.Cartoon
-ArrowBtn.TextSize=17
+ArrowBtn.TextSize=15
 ArrowBtn.Parent=WeaponFrame
 
 local Status=Instance.new("TextLabel")
@@ -805,7 +805,7 @@ EspBtn.MouseButton1Click:Connect(function()
 end)
 
 task.spawn(function()
- while task.wait(0.5) do
+ while task.wait(1) do
   pcall(function()
    updatePumpkinESP()
   end)
@@ -1178,12 +1178,12 @@ end
 --// CHỈ HIỆN CHỮ
 local Label = Instance.new("TextLabel",Gui)
 Label.Size = UDim2.new(0,400,0,100)
-Label.Position = UDim2.new(0.5,-200,-0.07,0)
+Label.Position = UDim2.new(0.5,-200,-0.1,0)
 Label.BackgroundTransparency = 1
 Label.Text = "🎃 PUMPKIN HUNT | NHAT HIHI"
 Label.TextColor3 = Color3.fromRGB(255,0,0)
-Label.Font = Enum.Font.Cartoon
-Label.TextSize = 21
+Label.Font = Enum.Font.Gotham
+Label.TextSize = 23
 Label.TextStrokeTransparency = 1
 
 --// HIỆN 5 GIÂY
