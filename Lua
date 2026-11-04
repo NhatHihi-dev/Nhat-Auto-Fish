@@ -1178,12 +1178,12 @@ end
 --// CHỈ HIỆN CHỮ
 local Label = Instance.new("TextLabel",Gui)
 Label.Size = UDim2.new(0,400,0,100)
-Label.Position = UDim2.new(0.5,-200,0,0)
+Label.Position = UDim2.new(0.5,-200,-0.07,0)
 Label.BackgroundTransparency = 1
 Label.Text = "🎃 PUMPKIN HUNT | NHAT HIHI"
 Label.TextColor3 = Color3.fromRGB(255,0,0)
 Label.Font = Enum.Font.Cartoon
-Label.TextSize = 18
+Label.TextSize = 21
 Label.TextStrokeTransparency = 1
 
 --// HIỆN 5 GIÂY
