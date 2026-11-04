@@ -1178,16 +1178,16 @@ end
 --// CHỈ HIỆN CHỮ
 local Label = Instance.new("TextLabel",Gui)
 Label.Size = UDim2.new(0,400,0,100)
-Label.Position = UDim2.new(0.5,-200,0.1,0)
+Label.Position = UDim2.new(0.5,-200,0,0)
 Label.BackgroundTransparency = 1
 Label.Text = "🎃 PUMPKIN HUNT | NHAT HIHI"
-Label.TextColor3 = Color3.fromRGB(100,200,255)
+Label.TextColor3 = Color3.fromRGB(255,0,0)
 Label.Font = Enum.Font.Cartoon
-Label.TextSize = 32
+Label.TextSize = 18
 Label.TextStrokeTransparency = 1
 
 --// HIỆN 5 GIÂY
-task.wait(5)
+task.wait(7)
 
 --// MỜ DẦN
 local Fade = TweenService:Create(Label,TweenInfo.new(1),{
