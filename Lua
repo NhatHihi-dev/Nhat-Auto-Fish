@@ -1204,6 +1204,7 @@ UIS.InputChanged:Connect(function(Input)
  end
 end)
 
+
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
@@ -1211,23 +1212,29 @@ local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+
+--// AUTO ANTI AFK
 LocalPlayer.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
     task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
 end)
 
+--// XÓA GUI CŨ
 pcall(function()
     local Old = CoreGui:FindFirstChild("AntiAFKNotify")
     if Old then Old:Destroy() end
 end)
 
+--// GUI
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "AntiAFKNotify"
 Gui.ResetOnSpawn = false
+
 pcall(function()
     Gui.Parent = CoreGui
 end)
+
 if not Gui.Parent then
     Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
@@ -1235,7 +1242,7 @@ end
 --// CHỮ CHIA ĐÔI
 local LeftLabel = Instance.new("TextLabel",Gui)
 LeftLabel.Size = UDim2.new(0.5,0,0,100)
-LeftLabel.Position = UDim2.new(0,0,0,0)
+LeftLabel.Position = UDim2.new(0,0,0.4,0)
 LeftLabel.BackgroundTransparency = 1
 LeftLabel.Text = "🎃 PUMPKIN HUNT"
 LeftLabel.TextColor3 = Color3.fromRGB(255,0,0)
@@ -1246,7 +1253,7 @@ LeftLabel.TextStrokeTransparency = 1
 
 local RightLabel = Instance.new("TextLabel",Gui)
 RightLabel.Size = UDim2.new(0.5,0,0,100)
-RightLabel.Position = UDim2.new(0.5,0,0,0)
+RightLabel.Position = UDim2.new(0.5,0,0.4,0)
 RightLabel.BackgroundTransparency = 1
 RightLabel.Text = " | NHAT HIHI"
 RightLabel.TextColor3 = Color3.fromRGB(255,0,0)
@@ -1255,7 +1262,19 @@ RightLabel.TextSize = 25
 RightLabel.TextXAlignment = Enum.TextXAlignment.Left
 RightLabel.TextStrokeTransparency = 1
 
---// HIỆN 5 GIÂY
+--// HIỆU ỨNG TRƯỢT LÊN
+local LeftIntro = TweenService:Create(LeftLabel,TweenInfo.new(0.8,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
+    Position = UDim2.new(0,0,-0.1,0)
+})
+
+local RightIntro = TweenService:Create(RightLabel,TweenInfo.new(0.8,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
+    Position = UDim2.new(0.5,0,-0.1,0)
+})
+
+LeftIntro:Play()
+RightIntro:Play()
+
+--// GIỮ 5 GIÂY SAU KHI HIỆN
 task.wait(5)
 
 --// TÁCH HAI BÊN
