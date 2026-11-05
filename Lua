@@ -792,13 +792,6 @@ local function stopFly()
     Status.Text="Pumpkin: None"
 end
 
-
- setNoclip(false)
- setPlayerHighlight(false)
- DisableAntiGravity()
- Status.Text="Pumpkin: None"
-end
-
 local function startFly()
     if Flying then
         stopFly()
@@ -1063,7 +1056,7 @@ end
 	else
 		Status.Text="Pumpkin: "..TargetName.." | "..math.floor(Distance/10+0.5).."m"
 	end
-
+ end)
 
 --// ATTACK LOOP RIÊNG
 task.spawn(function()
