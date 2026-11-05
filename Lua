@@ -33,11 +33,14 @@ local RemoteAttack=NetFolder and NetFolder:FindFirstChild("RE/RegisterAttack")
 local SPEED=220
 local MAX_DESYNC=30
 local PAUSE_TIME=1
-local WEAPON_DISTANCE=15
+local WEAPON_DISTANCE=5000
 local PUMPKIN_GROUP_DISTANCE=3
-local ESP_DISTANCE=10000
+local ESP_DISTANCE=5000
 local JACK_DISTANCE=100
-local ATTACK_INTERVAL=0.01
+local ATTACK_INTERVAL=0.1
+local PUMPKIN_WAIT_TIME=2
+local PumpkinWaitUntil=0
+local CollectedPumpkins={}
 
 local Flying=false
 local ESPEnabled=false
@@ -343,6 +346,30 @@ local function validPumpkinSnowman(Object)
 	local Part=getJackPart(Object)
 	local Humanoid=getJackHumanoid(Object)
 	return Part and Part.Parent and Humanoid and Humanoid.Health>0
+end
+
+local function getNextPumpkin()
+    local Root=getRoot()
+    local FolderNow=getFolder()
+    if not Root or not FolderNow then return nil end
+
+    local Nearest=nil
+    local NearestDistance=math.huge
+
+    for _,v in ipairs(FolderNow:GetDescendants()) do
+        if validPumpkin(v) and not CollectedPumpkins[v] then
+            local Part=getPart(v)
+            if Part then
+                local Distance=(Part.Position-Root.Position).Magnitude
+                if Distance<NearestDistance then
+                    NearestDistance=Distance
+                    Nearest=v
+                end
+            end
+        end
+    end
+
+    return Nearest
 end
 
 local function getNearestPumpkin()
@@ -751,10 +778,20 @@ local function equipSelectedWeapon()
 end
 
 local function stopFly()
- Flying=false
- CurrentTarget=nil
- PauseUntil=0
- LastExpectedPosition=nil
+    Flying=false
+    CurrentTarget=nil
+    PauseUntil=0
+    LastExpectedPosition=nil
+
+    table.clear(CollectedPumpkins)
+    PumpkinWaitUntil=0
+
+    setNoclip(false)
+    setPlayerHighlight(false)
+    DisableAntiGravity()
+    Status.Text="Pumpkin: None"
+end
+
 
  setNoclip(false)
  setPlayerHighlight(false)
@@ -763,19 +800,22 @@ local function stopFly()
 end
 
 local function startFly()
- if Flying then
-  stopFly()
-  return
- end
+    if Flying then
+        stopFly()
+        return
+    end
 
- Flying=true
- CurrentTarget=nil
- LastExpectedPosition=nil
+    Flying=true
+    CurrentTarget=nil
+    LastExpectedPosition=nil
 
- setPlayerHighlight(true)
- setNoclip(true)
+    table.clear(CollectedPumpkins)
+    PumpkinWaitUntil=0
 
- Status.Text="Đang tìm Pumpkin..."
+    setPlayerHighlight(true)
+    setNoclip(true)
+
+    Status.Text="Đang tìm Pumpkin..."
 end
 
 FlyBtn.MouseButton1Click:Connect(function()
@@ -858,60 +898,66 @@ end
 	end
 
 	--// TÌM TARGET
-	local JackTarget=getNearestJack()
-	local SnowmanTarget=getNearestPumpkinSnowman()
-	local PumpkinTarget=getNearestPumpkin()
-
-	local BestTarget=nil
-	local BestType=nil
-	local BestDistance=math.huge
-
-	if JackTarget then
-		local Part=getJackPart(JackTarget)
-		if Part then
-			local Distance=(Part.Position-Root.Position).Magnitude
-			if Distance<BestDistance then
-				BestTarget=JackTarget
-				BestType="Jack"
-				BestDistance=Distance
-			end
-		end
-	end
-
-	if SnowmanTarget then
-		local Part=getJackPart(SnowmanTarget)
-		if Part then
-			local Distance=(Part.Position-Root.Position).Magnitude
-			if Distance<BestDistance then
-				BestTarget=SnowmanTarget
-				BestType="Snowman"
-				BestDistance=Distance
-			end
-		end
-	end
-
-	if PumpkinTarget then
-		local Part=getPart(PumpkinTarget)
-		if Part then
-			local Distance=(Part.Position-Root.Position).Magnitude
-			if Distance<BestDistance then
-				BestTarget=PumpkinTarget
-				BestType="Pumpkin"
-				BestDistance=Distance
-			end
-		end
-	end
-
-	if not BestTarget then
+	if not CurrentTarget or not CurrentTarget.Parent then
 		CurrentTarget=nil
 		CurrentTargetType=nil
+	end
+
+	if not CurrentTarget then
+		local JackTarget=getNearestJack()
+		local SnowmanTarget=getNearestPumpkinSnowman()
+		local PumpkinTarget=getNextPumpkin()
+
+		local BestTarget=nil
+		local BestType=nil
+		local BestDistance=math.huge
+
+		if JackTarget then
+			local Part=getJackPart(JackTarget)
+			if Part then
+				local Distance=(Part.Position-Root.Position).Magnitude
+				if Distance<BestDistance then
+					BestTarget=JackTarget
+					BestType="Jack"
+					BestDistance=Distance
+				end
+			end
+		end
+
+		if SnowmanTarget then
+			local Part=getJackPart(SnowmanTarget)
+			if Part then
+				local Distance=(Part.Position-Root.Position).Magnitude
+				if Distance<BestDistance then
+					BestTarget=SnowmanTarget
+					BestType="Snowman"
+					BestDistance=Distance
+				end
+			end
+		end
+
+		if PumpkinTarget then
+			local Part=getPart(PumpkinTarget)
+			if Part then
+				local Distance=(Part.Position-Root.Position).Magnitude
+				if Distance<BestDistance then
+					BestTarget=PumpkinTarget
+					BestType="Pumpkin"
+					BestDistance=Distance
+				end
+			end
+		end
+
+		CurrentTarget=BestTarget
+		CurrentTargetType=BestType
+		PumpkinWaitUntil=0
+	end
+
+	if not CurrentTarget then
 		Status.Text="Đang tìm Pumpkin..."
 		LastExpectedPosition=Root.Position
 		return
 	end
-
-	CurrentTarget=BestTarget
-	CurrentTargetType=BestType
 
 	--// LẤY PART TARGET
 	local TargetPart
@@ -925,6 +971,7 @@ end
 	if not TargetPart then
 		CurrentTarget=nil
 		CurrentTargetType=nil
+		PumpkinWaitUntil=0
 		LastExpectedPosition=Root.Position
 		return
 	end
@@ -948,23 +995,40 @@ end
 		if not validPumpkin(CurrentTarget) then
 			CurrentTarget=nil
 			CurrentTargetType=nil
+			PumpkinWaitUntil=0
 			LastExpectedPosition=Root.Position
 			return
 		end
 	end
 
 	--// BAY THEO TARGET
-local FLY_HEIGHT=5
-if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
-	FLY_HEIGHT=35
-end
-local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
-local Distance=(TargetPart.Position-Root.Position).Magnitude
+	local FLY_HEIGHT=5
+	if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+		FLY_HEIGHT=35
+	end
+
+	local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
+	local Distance=(TargetPart.Position-Root.Position).Magnitude
+
 	if Distance<=3 then
-		if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
-			Status.Text="Đang đánh: "..CurrentTarget.Name
+		if CurrentTargetType=="Pumpkin" then
+			if PumpkinWaitUntil==0 then
+				PumpkinWaitUntil=os.clock()+PUMPKIN_WAIT_TIME
+			end
+
+			local Remaining=PumpkinWaitUntil-os.clock()
+
+			if Remaining<=0 then
+				CollectedPumpkins[CurrentTarget]=true
+				CurrentTarget=nil
+				CurrentTargetType=nil
+				PumpkinWaitUntil=0
+				Status.Text="Đang tìm Pumpkin tiếp theo..."
+			else
+				Status.Text="Đợi Pumpkin: "..string.format("%.1f",Remaining).."s"
+			end
 		else
-			Status.Text="Đã tới: "..CurrentTarget.Name
+			Status.Text="Đang đánh: "..CurrentTarget.Name
 		end
 
 		LastExpectedPosition=Root.Position
@@ -984,7 +1048,7 @@ local Distance=(TargetPart.Position-Root.Position).Magnitude
 	end
 
 	local CurrentSpeed=Distance<=100 and 3000 or SPEED
-local Alpha=math.clamp((CurrentSpeed*DT)/Distance,0,1)
+	local Alpha=math.clamp((CurrentSpeed*DT)/Distance,0,1)
 	local NewPosition=Root.Position:Lerp(TargetPosition,Alpha)
 
 	Root.CFrame=CFrame.new(NewPosition)
@@ -999,7 +1063,7 @@ local Alpha=math.clamp((CurrentSpeed*DT)/Distance,0,1)
 	else
 		Status.Text="Pumpkin: "..TargetName.." | "..math.floor(Distance/10+0.5).."m"
 	end
-end)
+
 
 --// ATTACK LOOP RIÊNG
 task.spawn(function()
@@ -1146,50 +1210,40 @@ local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
-
 local LocalPlayer = Players.LocalPlayer
-
---// AUTO ANTI AFK
 LocalPlayer.Idled:Connect(function()
     VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     task.wait(1)
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
---// XÓA GUI CŨ
 pcall(function()
     local Old = CoreGui:FindFirstChild("AntiAFKNotify")
     if Old then Old:Destroy() end
 end)
 
---// GUI THÔNG BÁO
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "AntiAFKNotify"
 Gui.ResetOnSpawn = false
-
 pcall(function()
     Gui.Parent = CoreGui
 end)
-
 if not Gui.Parent then
     Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
---// CHỈ HIỆN CHỮ
 local Label = Instance.new("TextLabel",Gui)
 Label.Size = UDim2.new(0,400,0,100)
-Label.Position = UDim2.new(0.5,-200,-0.1,0)
+Label.Position = UDim2.new(0.5,-200,-0.2,0)
 Label.BackgroundTransparency = 1
 Label.Text = "🎃 PUMPKIN HUNT | NHAT HIHI"
 Label.TextColor3 = Color3.fromRGB(255,0,0)
-Label.Font = Enum.Font.Gotham
-Label.TextSize = 23
+Label.Font = Enum.Font.GothamBold
+Label.TextSize = 25
 Label.TextStrokeTransparency = 1
 
---// HIỆN 5 GIÂY
 task.wait(7)
 
---// MỜ DẦN
 local Fade = TweenService:Create(Label,TweenInfo.new(1),{
     TextTransparency = 1
 })
