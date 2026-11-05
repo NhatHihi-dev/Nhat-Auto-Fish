@@ -1232,23 +1232,45 @@ if not Gui.Parent then
     Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local Label = Instance.new("TextLabel",Gui)
-Label.Size = UDim2.new(0,400,0,100)
-Label.Position = UDim2.new(0.5,-200,-0.2,0)
-Label.BackgroundTransparency = 1
-Label.Text = "🎃 PUMPKIN HUNT | NHAT HIHI"
-Label.TextColor3 = Color3.fromRGB(255,0,0)
-Label.Font = Enum.Font.GothamBold
-Label.TextSize = 25
-Label.TextStrokeTransparency = 1
+--// CHỮ CHIA ĐÔI
+local LeftLabel = Instance.new("TextLabel",Gui)
+LeftLabel.Size = UDim2.new(0.5,0,0,100)
+LeftLabel.Position = UDim2.new(0,0,0,0)
+LeftLabel.BackgroundTransparency = 1
+LeftLabel.Text = "🎃 PUMPKIN HUNT"
+LeftLabel.TextColor3 = Color3.fromRGB(255,0,0)
+LeftLabel.Font = Enum.Font.GothamBold
+LeftLabel.TextSize = 25
+LeftLabel.TextXAlignment = Enum.TextXAlignment.Right
+LeftLabel.TextStrokeTransparency = 1
 
-task.wait(7)
+local RightLabel = Instance.new("TextLabel",Gui)
+RightLabel.Size = UDim2.new(0.5,0,0,100)
+RightLabel.Position = UDim2.new(0.5,0,0,0)
+RightLabel.BackgroundTransparency = 1
+RightLabel.Text = " | NHAT HIHI"
+RightLabel.TextColor3 = Color3.fromRGB(255,0,0)
+RightLabel.Font = Enum.Font.GothamBold
+RightLabel.TextSize = 25
+RightLabel.TextXAlignment = Enum.TextXAlignment.Left
+RightLabel.TextStrokeTransparency = 1
 
-local Fade = TweenService:Create(Label,TweenInfo.new(1),{
+--// HIỆN 5 GIÂY
+task.wait(5)
+
+--// TÁCH HAI BÊN
+local LeftTween = TweenService:Create(LeftLabel,TweenInfo.new(1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+    Position = UDim2.new(0,-300,0,0),
     TextTransparency = 1
 })
 
-Fade:Play()
-Fade.Completed:Wait()
+local RightTween = TweenService:Create(RightLabel,TweenInfo.new(1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+    Position = UDim2.new(0.5,300,0,0),
+    TextTransparency = 1
+})
 
+LeftTween:Play()
+RightTween:Play()
+
+RightTween.Completed:Wait()
 Gui:Destroy()
