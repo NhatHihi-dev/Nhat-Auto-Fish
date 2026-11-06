@@ -50,6 +50,7 @@ local PauseUntil=0
 local LastExpectedPosition=nil
 local LastWeaponEquip=0
 local ChooseWP="Melee"
+local CurrentPumpkinModel=nil
 
 _G.ChooseWP="Melee"
 _G.SelectWeapon=nil
@@ -302,6 +303,12 @@ local function validPumpkin(Object)
  if not Object or not Object.Parent or not isPumpkin(Object) then return false end
  local Part=getPart(Object)
  return Part and Part.Parent
+end
+
+local function getPumpkinModel(Object)
+	if not Object then return nil end
+	if Object:IsA("Model") then return Object end
+	return Object:FindFirstAncestorOfClass("Model")
 end
 
 local function isJackOLantern(Object)
@@ -782,6 +789,7 @@ local function stopFly()
     CurrentTarget=nil
     PauseUntil=0
     LastExpectedPosition=nil
+    CurrentPumpkinModel=nil
 
     table.clear(CollectedPumpkins)
     PumpkinWaitUntil=0
@@ -876,11 +884,19 @@ RunService.Heartbeat:Connect(function(DT)
 		DisableAntiGravity()
 		return
 	end
---// KIỂM TRA PUMPKIN ĐÃ MẤT
-if CurrentTarget and CurrentTargetType=="Pumpkin" and not validPumpkin(CurrentTarget) then
-	CurrentTarget=nil
-	CurrentTargetType=nil
-LastExpectedPosition=Root.Position
+--// KIỂM TRA MODEL PUMPKIN ĐÃ MẤT
+if CurrentTargetType=="Pumpkin" and CurrentTarget then
+	local Model=CurrentPumpkinModel
+	local FolderNow=getFolder()
+
+	if not Model or not FolderNow or not Model:IsDescendantOf(FolderNow) then
+		CollectedPumpkins[CurrentTarget]=true
+		CurrentTarget=nil
+		CurrentTargetType=nil
+		CurrentPumpkinModel=nil
+		PumpkinWaitUntil=0
+		LastExpectedPosition=Root.Position
+	end
 end
 
 	EnableAntiGravity(Root)
@@ -942,9 +958,14 @@ end
 		end
 
 		CurrentTarget=BestTarget
-		CurrentTargetType=BestType
-		PumpkinWaitUntil=0
-	end
+      CurrentTargetType=BestType
+      CurrentPumpkinModel=nil
+
+if BestType=="Pumpkin" then
+	CurrentPumpkinModel=getPumpkinModel(BestTarget)
+end
+
+PumpkinWaitUntil=0
 
 	if not CurrentTarget then
 		Status.Text="Đang tìm Pumpkin..."
@@ -1111,12 +1132,17 @@ local function connectFolder()
 	if not FolderNow then return end
 
 	FolderConnection=FolderNow.DescendantRemoving:Connect(function(Object)
-		if Object==CurrentTarget then
+	if CurrentTargetType=="Pumpkin" and CurrentPumpkinModel then
+		if Object==CurrentPumpkinModel then
+			CollectedPumpkins[CurrentTarget]=true
 			CurrentTarget=nil
 			CurrentTargetType=nil
+			CurrentPumpkinModel=nil
+			PumpkinWaitUntil=0
 		end
-	end)
-end
+	end
+end)
+end 
 
 connectFolder()
 
