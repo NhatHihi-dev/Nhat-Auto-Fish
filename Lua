@@ -1031,17 +1031,22 @@ end
 	if Distance<=5 then
     if CurrentTargetType=="Pumpkin" then
         local Model=CurrentPumpkinModel or getPumpkinModel(CurrentTarget)
+        local Target=CurrentTarget
 
         CollectedPumpkins[Model]=true
 
-     for i=1,5 do
-        pcall(function()
-            if RemoteAttack then
-                RemoteAttack:FireServer(0.00000000001,1)
-            end
+        for i=1,5 do
+            pcall(function()
+                if RemoteAttack then
+                    RemoteAttack:FireServer(0.00000000001,1)
+                end
+            end)
+            task.wait(0.05)
+        end
 
+        pcall(function()
             if RemoteHit then
-                RemoteHit:FireServer(CurrentTarget)
+                RemoteHit:FireServer(Target)
             end
         end)
 
