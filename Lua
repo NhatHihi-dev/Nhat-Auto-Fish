@@ -818,7 +818,6 @@ local function startFly()
 
     Status.Text="Đang tìm Pumpkin..."
 end
-end
 
 FlyBtn.MouseButton1Click:Connect(function()
  startFly()
@@ -973,7 +972,7 @@ PumpkinWaitUntil=0
 		LastExpectedPosition=Root.Position
 		return
 	end
-
+end
 	--// LẤY PART TARGET
 	local TargetPart
 
