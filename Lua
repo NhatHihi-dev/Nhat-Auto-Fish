@@ -33,12 +33,12 @@ local RemoteAttack=NetFolder and NetFolder:FindFirstChild("RE/RegisterAttack")
 local SPEED=220
 local MAX_DESYNC=30
 local PAUSE_TIME=1
-local WEAPON_DISTANCE=5000
+local WEAPON_DISTANCE=500
 local PUMPKIN_GROUP_DISTANCE=3
 local ESP_DISTANCE=5000
 local JACK_DISTANCE=100
 local ATTACK_INTERVAL=0.1
-local PUMPKIN_WAIT_TIME=1
+local PUMPKIN_WAIT_TIME=2
 local PumpkinWaitUntil=0
 local CollectedPumpkins={}
 
@@ -306,9 +306,9 @@ local function validPumpkin(Object)
 end
 
 local function getPumpkinModel(Object)
-	if not Object then return nil end
-	if Object:IsA("Model") then return Object end
-	return Object:FindFirstAncestorOfClass("Model")
+    if not Object then return nil end
+    if Object:IsA("Model") then return Object end
+    return Object:FindFirstAncestorOfClass("Model") or Object
 end
 
 local function isJackOLantern(Object)
@@ -364,10 +364,14 @@ local function getNextPumpkin()
     local NearestDistance=math.huge
 
     for _,v in ipairs(FolderNow:GetDescendants()) do
-        if validPumpkin(v) and not CollectedPumpkins[v] then
+        local Model=getPumpkinModel(v)
+
+        if validPumpkin(v) and not CollectedPumpkins[Model] then
             local Part=getPart(v)
+
             if Part then
                 local Distance=(Part.Position-Root.Position).Magnitude
+
                 if Distance<NearestDistance then
                     NearestDistance=Distance
                     Nearest=v
@@ -1024,24 +1028,28 @@ end
 	local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
 	local Distance=(TargetPart.Position-Root.Position).Magnitude
 
-	if Distance<=3 then
+	if Distance<=5 then
     if CurrentTargetType=="Pumpkin" then
-        if PumpkinWaitUntil==0 then
-            PumpkinWaitUntil=os.clock()+PUMPKIN_WAIT_TIME
-        end
+        local Model=CurrentPumpkinModel or getPumpkinModel(CurrentTarget)
 
-        local Remaining=PumpkinWaitUntil-os.clock()
+        CollectedPumpkins[Model]=true
 
-        if Remaining<=0 then
-            CollectedPumpkins[CurrentTarget]=true
-            CurrentTarget=nil
-            CurrentTargetType=nil
-            CurrentPumpkinModel=nil
-            PumpkinWaitUntil=0
-            Status.Text="Đang tìm Pumpkin tiếp theo..."
-        else
-            Status.Text="Đợi Pumpkin: "..string.format("%.1f",Remaining).."s"
-        end
+     for i=1,5 do
+        pcall(function()
+            if RemoteAttack then
+                RemoteAttack:FireServer(0.00000000001,1)
+            end
+
+            if RemoteHit then
+                RemoteHit:FireServer(CurrentTarget)
+            end
+        end)
+
+        CurrentTarget=nil
+        CurrentTargetType=nil
+        CurrentPumpkinModel=nil
+        PumpkinWaitUntil=0
+        Status.Text="Đã đánh Pumpkin - Tìm quả tiếp theo..."
     else
         Status.Text="Đang đánh: "..CurrentTarget.Name
     end
@@ -1096,7 +1104,7 @@ task.spawn(function()
 					TargetPart=getPart(CurrentTarget)
 				end
 
-				if TargetPart and (TargetPart.Position-Root.Position).Magnitude<=WEAPON_DISTANCE then
+				if TargetPart and (TargetPart.Position-Root.Position).Magnitude<=WEAPON_DISTANCE and CurrentTargetType~="Pumpkin" then
 					equipSelectedWeapon()
 
 					local Tool=Character:FindFirstChildOfClass("Tool")
