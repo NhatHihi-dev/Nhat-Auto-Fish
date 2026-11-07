@@ -38,7 +38,7 @@ local PUMPKIN_GROUP_DISTANCE=3
 local ESP_DISTANCE=5000
 local JACK_DISTANCE=100
 local ATTACK_INTERVAL=0.1
-local PUMPKIN_WAIT_TIME=2
+local PUMPKIN_WAIT_TIME=1
 local PumpkinWaitUntil=0
 local CollectedPumpkins={}
 
@@ -1025,29 +1025,30 @@ end
 	local Distance=(TargetPart.Position-Root.Position).Magnitude
 
 	if Distance<=3 then
-		if CurrentTargetType=="Pumpkin" then
-			if PumpkinWaitUntil==0 then
-				PumpkinWaitUntil=os.clock()+PUMPKIN_WAIT_TIME
-			end
+    if CurrentTargetType=="Pumpkin" then
+        if PumpkinWaitUntil==0 then
+            PumpkinWaitUntil=os.clock()+PUMPKIN_WAIT_TIME
+        end
 
-			local Remaining=PumpkinWaitUntil-os.clock()
+        local Remaining=PumpkinWaitUntil-os.clock()
 
-			if Remaining<=0 then
-				CollectedPumpkins[CurrentTarget]=true
-				CurrentTarget=nil
-				CurrentTargetType=nil
-				PumpkinWaitUntil=0
-				Status.Text="Đang tìm Pumpkin tiếp theo..."
-			else
-				Status.Text="Đợi Pumpkin: "..string.format("%.1f",Remaining).."s"
-			end
-		else
-			Status.Text="Đang đánh: "..CurrentTarget.Name
-		end
+        if Remaining<=0 then
+            CollectedPumpkins[CurrentTarget]=true
+            CurrentTarget=nil
+            CurrentTargetType=nil
+            CurrentPumpkinModel=nil
+            PumpkinWaitUntil=0
+            Status.Text="Đang tìm Pumpkin tiếp theo..."
+        else
+            Status.Text="Đợi Pumpkin: "..string.format("%.1f",Remaining).."s"
+        end
+    else
+        Status.Text="Đang đánh: "..CurrentTarget.Name
+    end
 
-		LastExpectedPosition=Root.Position
-		return
-	end
+    LastExpectedPosition=Root.Position
+    return
+end
 
 	--// KIỂM TRA DESYNC
 	if LastExpectedPosition then
