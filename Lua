@@ -818,6 +818,7 @@ local function startFly()
 
     Status.Text="Đang tìm Pumpkin..."
 end
+end
 
 FlyBtn.MouseButton1Click:Connect(function()
  startFly()
