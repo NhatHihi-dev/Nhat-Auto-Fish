@@ -1035,7 +1035,7 @@ end
 
         CollectedPumpkins[Model]=true
 
-        for i=1,5 do
+        for i=1,15 do
             pcall(function()
                 if RemoteAttack then
                     RemoteAttack:FireServer(0.00000000001,1)
@@ -1109,22 +1109,13 @@ task.spawn(function()
 					TargetPart=getPart(CurrentTarget)
 				end
 
-				if TargetPart and (TargetPart.Position-Root.Position).Magnitude<=WEAPON_DISTANCE and CurrentTargetType~="Pumpkin" then
+				if TargetPart and (TargetPart.Position-Root.Position).Magnitude<=WEAPON_DISTANCE then
 					equipSelectedWeapon()
 
 					local Tool=Character:FindFirstChildOfClass("Tool")
 
 					if Tool and (Tool.ToolTip=="Melee" or Tool.ToolTip=="Sword") then
-						if CurrentTargetType=="Pumpkin" then
-							pcall(function()
-								if RemoteAttack then
-									RemoteAttack:FireServer(0.00000000001,1)
-								end
-								if RemoteHit then
-									RemoteHit:FireServer(CurrentTarget)
-								end
-							end)
-						elseif CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
+						if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
 							AttackEnemyTarget(CurrentTarget)
 						end
 					end
