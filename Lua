@@ -33,11 +33,11 @@ local RemoteAttack=NetFolder and NetFolder:FindFirstChild("RE/RegisterAttack")
 local SPEED=220
 local MAX_DESYNC=30
 local PAUSE_TIME=1
-local WEAPON_DISTANCE=5000
+local WEAPON_DISTANCE=500
 local PUMPKIN_GROUP_DISTANCE=3
 local ESP_DISTANCE=5000
-local JACK_DISTANCE=100
-local ATTACK_INTERVAL=0.1
+local JACK_DISTANCE=500
+local ATTACK_INTERVAL=0.5
 local PUMPKIN_WAIT_TIME=2
 local PumpkinWaitUntil=0
 local CollectedPumpkins={}
@@ -1018,7 +1018,7 @@ end
 	--// BAY THEO TARGET
 	local FLY_HEIGHT=5
 	if CurrentTargetType=="Jack" or CurrentTargetType=="Snowman" then
-		FLY_HEIGHT=35
+		FLY_HEIGHT=20
 	end
 
 	local TargetPosition=TargetPart.Position+Vector3.new(0,FLY_HEIGHT,0)
